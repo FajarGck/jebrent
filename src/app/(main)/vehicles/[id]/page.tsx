@@ -2,10 +2,12 @@ import { notFound } from 'next/navigation';
 import { getVehicleById } from '@/lib/db/vehicles';
 import { formatCurrency } from '@/lib/utils';
 import { VEHICLE_TYPE_LABELS, VEHICLE_STATUS_LABELS } from '@/lib/constants';
-import { Car, Calendar, Gauge, Palette, Hash, User, Clock } from 'lucide-react';
+import { Car, Calendar, Gauge, Palette, Hash, User, Clock, Star } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { VehicleDetailGallery } from '@/components/vehicles/vehicle-detail-galery';
+// == DEV B: Import review components here ==
+// import { ReviewList } from '@/components/reviews/review-list';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -41,6 +43,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
     { icon: Gauge, label: 'Kilometer', value: `${vehicle.mileage.toLocaleString('id-ID')} km` },
   ];
 
+  // == DEV B: Fetch reviews here ==
+  // const reviews = await getReviewsByVehicle(id);
+  // const avgRating = await getAverageRating(id);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
@@ -50,6 +56,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+        {/* === LEFT COLUMN === */}
         <div className="space-y-6">
           {images.length > 0 ? (
             <VehicleDetailGallery images={images} vehicleName={`${vehicle.brand} ${vehicle.model}`} />
@@ -82,8 +89,23 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
               ))}
             </div>
           </div>
+
+          {/* ============================================================
+           *  REVIEW SECTION — Dev B's territory
+           *  Dev B: Replace the placeholder below with <ReviewList />
+           *  ============================================================ */}
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="h-5 w-5 text-warning" />
+              <h2 className="text-lg font-semibold">Ulasan</h2>
+              {/* DEV B: Show average rating here, e.g. <span>(4.5 / 5)</span> */}
+            </div>
+            {/* DEV B: Replace this placeholder with <ReviewList vehicleId={id} reviews={reviews} /> */}
+            <p className="text-sm text-muted text-center py-8">Belum ada ulasan untuk kendaraan ini.</p>
+          </div>
         </div>
 
+        {/* === RIGHT COLUMN === */}
         <div className="space-y-6">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-start justify-between">
@@ -124,10 +146,17 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
 
+            {/* ============================================================
+             *  BOOKING BUTTON — Dev A's territory
+             *  Links to /vehicles/[id]/booking where Dev A builds the form
+             *  ============================================================ */}
             {vehicle.status === 'available' && (
-              <button className="mt-6 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-xl">
+              <Link
+                href={`/vehicles/${vehicle.id}/booking`}
+                className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-xl"
+              >
                 Sewa Kendaraan Ini
-              </button>
+              </Link>
             )}
           </div>
 

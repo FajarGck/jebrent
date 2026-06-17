@@ -150,6 +150,53 @@ export type DeliverySchedule = {
   created_at: string;
 };
 
+// -- Extended Types (Join Results) --
+// These types represent data returned from queries with joins.
+// Both Dev A and Dev B should import these — do NOT modify this file.
+
+/** Booking with vehicle info and renter profile */
+export type BookingWithVehicle = Booking & {
+  vehicles: Vehicle & {
+    vehicle_images: VehicleImage[];
+  };
+  profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
+};
+
+/** Booking with full details: vehicle, renter, payment, delivery */
+export type BookingWithDetails = Booking & {
+  vehicles: Vehicle & {
+    vehicle_images: VehicleImage[];
+    profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
+  };
+  profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
+  payments: Payment | null;
+  delivery_schedules: (DeliverySchedule & {
+    profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
+  }) | null;
+};
+
+/** Payment with linked booking and vehicle info */
+export type PaymentWithBooking = Payment & {
+  bookings: Booking & {
+    vehicles: Pick<Vehicle, "id" | "brand" | "model" | "plate_number">;
+    profiles: Pick<Profile, "id" | "full_name">;
+  };
+};
+
+/** Review with reviewer profile info */
+export type ReviewWithProfile = Review & {
+  profiles: Pick<Profile, "id" | "full_name" | "avatar_url">;
+};
+
+/** Delivery schedule with driver and booking details */
+export type DeliveryWithDetails = DeliverySchedule & {
+  profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
+  bookings: Booking & {
+    vehicles: Pick<Vehicle, "id" | "brand" | "model" | "plate_number">;
+    profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
+  };
+};
+
 // -- Supabase Database type (used by supabase client for type safety) --
 
 export type Database = {
