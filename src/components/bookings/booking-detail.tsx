@@ -13,6 +13,7 @@ import {
   confirmBooking,
   completeBooking,
 } from '@/actions/bookings';
+import AssignDriverForm from '../delivery/assign-driver-form';
 import {
   Car,
   Calendar,
@@ -39,6 +40,7 @@ type BookingDetailProps = {
   booking: BookingWithDetails;
   userRole: UserRole;
   userId: string;
+  drivers?: { id: string; full_name: string; phone: string | null }[];
 };
 
 // =============================================================
@@ -195,6 +197,7 @@ export default function BookingDetail({
   booking,
   userRole,
   userId,
+  drivers = [],
 }: BookingDetailProps) {
   const vehicle = booking.vehicles;
   const renter = booking.profiles;
@@ -373,6 +376,13 @@ export default function BookingDetail({
                     </span>
                   </div>
                 </div>
+              )}
+
+              {/* Tampilkan form Assign Driver jika owner/admin dan belum ada driver yang diassign */}
+              {!delivery &&
+                (userRole === 'admin' || userRole === 'owner') &&
+                ['confirmed', 'paid'].includes(booking.status) && (
+                  <AssignDriverForm bookingId={booking.id} drivers={drivers} />
               )}
             </div>
           )}

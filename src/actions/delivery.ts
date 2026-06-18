@@ -176,3 +176,23 @@ export async function getDriverDeliveries(): Promise<DeliveryWithDetails[]> {
   if (!user) return [];
   return getDeliveriesByDriver(user.id);
 }
+
+// =============================================================
+// GET DRIVERS
+// =============================================================
+
+/**
+ * Ambil daftar semua driver yang tersedia.
+ * Digunakan untuk dropdown Assign Driver oleh Owner/Admin.
+ */
+export async function getAvailableDrivers() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone")
+    .eq("role", "driver")
+    .order("full_name");
+
+  if (error || !data) return [];
+  return data;
+}

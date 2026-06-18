@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getBookingById } from '@/lib/db/bookings';
 import { resolveUserRole } from '@/lib/auth';
+import { getAvailableDrivers } from '@/actions/delivery';
 import BookingDetail from '@/components/bookings/booking-detail';
 import type { Metadata } from 'next';
 
@@ -46,9 +47,12 @@ export default async function BookingDetailPage({
     redirect('/bookings');
   }
 
+  // Jika owner/admin, ambil list driver
+  const drivers = (isAdmin || isVehicleOwner) ? await getAvailableDrivers() : [];
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <BookingDetail booking={booking} userRole={role} userId={user.id} />
+      <BookingDetail booking={booking} userRole={role} userId={user.id} drivers={drivers} />
     </div>
   );
 }

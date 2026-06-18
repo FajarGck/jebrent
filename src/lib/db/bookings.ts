@@ -186,6 +186,29 @@ export async function updateBookingStatus(
   return { error: null };
 }
 
+export async function updateBookingAndVehicleStatus(
+  bookingId: string,
+  vehicleId: string,
+  bookingStatus: 'confirmed' | 'pending' | 'paid' | 'in_delivery' | 'active' | 'returning' | 'completed' | 'cancelled',
+  vehicleStatus: 'available' | 'rented' | 'maintenance' | 'inactive'
+) {
+  const supabase = await createClient();
+
+  // Bypass TypeScript error menggunakan 'as any' karena tipe RPC belum di-generate (supabase gen types)
+  const { error } = await (supabase.rpc as any)('confirm_booking_transaction', {
+    p_booking_id: bookingId,
+    p_vehicle_id: vehicleId,
+    p_booking_status: bookingStatus,
+    p_vehicle_status: vehicleStatus
+  });
+
+
+  if (error) {
+    console.error("Error updating booking and vehicle status:", error);
+    throw new Error(error.message);
+  }
+}
+
 // =============================================================
 // VALIDATION HELPER
 // =============================================================

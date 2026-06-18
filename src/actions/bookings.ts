@@ -23,6 +23,8 @@ import {
   getBookingsByOwner,
   updateBookingStatus,
   checkDateOverlap,
+  getBookingById,
+  updateBookingAndVehicleStatus,
 } from "@/lib/db/bookings";
 import { getVehicleById } from "@/lib/db/vehicles";
 import type { BookingWithVehicle } from "@/types/database";
@@ -258,28 +260,15 @@ export async function cancelBooking(
  *
  * Hanya bisa dilakukan oleh: owner kendaraan yang di-booking, atau admin.
  */
-export async function confirmBooking(
-  bookingId: string
-): Promise<BookingActionResult> {
+
+export async function confirmBooking(bookingId: string): Promise<BookingActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return { error: "Unauthorized" };
 
-  // Ambil booking + vehicle untuk verifikasi
-  const { data: bookingData } = await supabase
-    .from("bookings")
-    .select("status, vehicle_id, vehicles(owner_id)")
-    .eq("id", bookingId)
-    .single();
-
-  const booking = bookingData as {
-    status: string;
-    vehicle_id: string;
-    vehicles: { owner_id: string } | null;
-  } | null;
+  // 1. Verifikasi Data & Izin (Logic yang sudah ada)
+  const booking = await getBookingById(bookingId); // Pastikan fungsi ini mereturn data + owner_id
 
   if (!booking) return { error: "Booking tidak ditemukan" };
   if (booking.status !== "pending") {
@@ -287,19 +276,35 @@ export async function confirmBooking(
   }
 
   const role = await resolveUserRole(supabase, user);
-  const isVehicleOwner = booking.vehicles?.owner_id === user.id;
+  const isVehicleOwner = booking.vehicles != null && booking.vehicles.owner_id === user.id;
   const isAdmin = role === "admin";
 
   if (!isVehicleOwner && !isAdmin) {
     return { error: "Hanya pemilik kendaraan atau admin yang dapat mengkonfirmasi" };
   }
 
-  const { error } = await updateBookingStatus(bookingId, "confirmed");
-  if (error) return { error };
+  if (!booking.vehicle_id) {
+    return { error: "Data kendaraan pada booking tidak ditemukan" };
+  }
 
+  // 2. Gunakan fungsi baru yang melibatkan RPC (update booking & vehicle sekaligus)
+  try {
+    await updateBookingAndVehicleStatus(
+      bookingId,
+      booking.vehicle_id,
+      "confirmed",
+      "rented"
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Gagal mengonfirmasi booking: ${message}` };
+  }
+
+  // 3. Revalidate path agar UI sinkron
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard/owner");
+  revalidatePath("/dashboard/admin"); // Tambahkan path admin jika perlu
 
   return { success: true, bookingId };
 }
