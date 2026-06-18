@@ -83,8 +83,7 @@ function ActionButtons({
 
   const isRenter = booking.renter_id === userId;
   const isAdmin = userRole === 'admin';
-  const vehicleOwnerId = (booking.vehicles as any)?.profiles?.id;
-  const isVehicleOwner = userRole === 'owner' && vehicleOwnerId === userId;
+  const isVehicleOwner = userRole === 'owner' && booking.vehicles?.owner_id === userId;
 
   async function handleAction(
     actionName: string,

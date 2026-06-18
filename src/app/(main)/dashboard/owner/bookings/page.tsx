@@ -1,6 +1,5 @@
 import { requireDashboardAccess } from '@/lib/auth-server';
 import { getOwnerBookings } from '@/actions/bookings';
-import { getBookingsByOwner } from '@/lib/db/bookings';
 import { BookingStatusBadge } from '@/components/bookings/booking-status';
 import OwnerBookingAction from '@/components/bookings/owner-booking-action';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -150,12 +149,12 @@ export default async function OwnerBookingsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const { user } = await requireDashboardAccess('owner');
+  await requireDashboardAccess('owner');
   const { status: statusParam } = await searchParams;
   const activeFilter = (statusParam ?? 'all') as BookingStatus | 'all';
 
-  // Ambil semua booking untuk kendaraan milik owner ini
-  const allBookings = await getBookingsByOwner(user.id);
+  // Ambil semua booking untuk kendaraan milik owner yang login
+  const allBookings = await getOwnerBookings();
 
   // Filter lokal
   const filtered =

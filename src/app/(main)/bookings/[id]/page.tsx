@@ -39,7 +39,7 @@ export default async function BookingDetailPage({
   const role = await resolveUserRole(supabase, user);
   const isRenter = booking.renter_id === user.id;
   const isAdmin = role === 'admin';
-  const isVehicleOwner = role === 'owner'; // RLS akan memfilter sendiri
+  const isVehicleOwner = role === 'owner' && booking.vehicles?.owner_id === user.id;
   const isAssignedDriver =
     role === 'driver' && booking.delivery_schedules?.booking_id === id;
 
