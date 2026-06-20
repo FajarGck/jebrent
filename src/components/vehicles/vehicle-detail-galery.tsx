@@ -32,7 +32,7 @@ export function VehicleDetailGallery({ images, vehicleName }: { images: VehicleI
       </div>
       {images.length > 1 && (
         <div className="grid grid-cols-4 gap-3">
-          {images.slice(1).map((img) => (
+          {images.map((img) => (
             <div key={img.id} className="aspect-square overflow-hidden rounded-xl border border-border bg-card-muted">
               <img src={img.image_url} alt="" className="h-full w-full cursor-pointer object-cover" onClick={() => pickImage(img.image_url)} />
             </div>
