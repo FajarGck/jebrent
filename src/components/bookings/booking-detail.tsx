@@ -8,28 +8,12 @@ import { useRouter } from 'next/navigation';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { BOOKING_STATUS_LABELS } from '@/lib/constants';
 import { BookingStatusBadge, BookingStatusStepper } from './booking-status';
-import {
-  cancelBooking,
-  confirmBooking,
-  completeBooking,
-} from '@/actions/bookings';
+import { cancelBooking, confirmBooking, completeBooking } from '@/actions/bookings';
 import AssignDriverForm from '../delivery/assign-driver-form';
-import {
-  Car,
-  Calendar,
-  MapPin,
-  FileText,
-  CreditCard,
-  Truck,
-  User,
-  Phone,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  ArrowLeft,
-  Clock,
-} from 'lucide-react';
+import PaymentForm from '../payments/payment-form';
+import PaymentConfirm from '../payments/payment-confirm';
+import { PaymentStatusBadge } from '../payments/payment-status';
+import { Car, Calendar, MapPin, FileText, CreditCard, Truck, User, Phone, AlertCircle, CheckCircle2, XCircle, Loader2, ArrowLeft, Clock } from 'lucide-react';
 import type { BookingWithDetails, UserRole } from '@/types/database';
 
 // =============================================================
@@ -46,15 +30,7 @@ type BookingDetailProps = {
 // =============================================================
 // Sub-component: Info Row
 // =============================================================
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
       <div className="mt-0.5 rounded-lg bg-card-muted p-1.5 text-muted">
@@ -71,11 +47,7 @@ function InfoRow({
 // =============================================================
 // Sub-component: Action Buttons
 // =============================================================
-function ActionButtons({
-  booking,
-  userRole,
-  userId,
-}: BookingDetailProps) {
+function ActionButtons({ booking, userRole, userId }: BookingDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -85,10 +57,7 @@ function ActionButtons({
   const isAdmin = userRole === 'admin';
   const isVehicleOwner = userRole === 'owner' && booking.vehicles?.owner_id === userId;
 
-  async function handleAction(
-    actionName: string,
-    actionFn: () => Promise<{ error?: string; success?: boolean }>
-  ) {
+  async function handleAction(actionName: string, actionFn: () => Promise<{ error?: string; success?: boolean }>) {
     setActionError(null);
     setActiveAction(actionName);
     startTransition(async () => {
@@ -105,26 +74,17 @@ function ActionButtons({
   const buttons: React.ReactNode[] = [];
 
   // Cancel: renter (pending/confirmed) atau admin
-  if (
-    (isRenter || isAdmin) &&
-    ['pending', 'confirmed'].includes(booking.status)
-  ) {
+  if ((isRenter || isAdmin) && ['pending', 'confirmed'].includes(booking.status)) {
     buttons.push(
       <button
         key="cancel"
-        onClick={() =>
-          handleAction('cancel', () => cancelBooking(booking.id))
-        }
+        onClick={() => handleAction('cancel', () => cancelBooking(booking.id))}
         disabled={isPending}
         className="inline-flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-2.5 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
       >
-        {activeAction === 'cancel' ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <XCircle className="h-4 w-4" />
-        )}
+        {activeAction === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
         Batalkan Booking
-      </button>
+      </button>,
     );
   }
 
@@ -133,43 +93,28 @@ function ActionButtons({
     buttons.push(
       <button
         key="confirm"
-        onClick={() =>
-          handleAction('confirm', () => confirmBooking(booking.id))
-        }
+        onClick={() => handleAction('confirm', () => confirmBooking(booking.id))}
         disabled={isPending}
         className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover disabled:opacity-50"
       >
-        {activeAction === 'confirm' ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <CheckCircle2 className="h-4 w-4" />
-        )}
+        {activeAction === 'confirm' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         Konfirmasi Booking
-      </button>
+      </button>,
     );
   }
 
   // Complete: vehicle owner atau admin, jika active/returning/paid
-  if (
-    (isVehicleOwner || isAdmin) &&
-    ['active', 'returning', 'paid'].includes(booking.status)
-  ) {
+  if ((isVehicleOwner || isAdmin) && ['active', 'returning', 'paid'].includes(booking.status)) {
     buttons.push(
       <button
         key="complete"
-        onClick={() =>
-          handleAction('complete', () => completeBooking(booking.id))
-        }
+        onClick={() => handleAction('complete', () => completeBooking(booking.id))}
         disabled={isPending}
         className="inline-flex items-center gap-2 rounded-xl bg-success px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-success/25 transition-all hover:opacity-90 disabled:opacity-50"
       >
-        {activeAction === 'complete' ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <CheckCircle2 className="h-4 w-4" />
-        )}
+        {activeAction === 'complete' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         Selesaikan Booking
-      </button>
+      </button>,
     );
   }
 
@@ -192,46 +137,26 @@ function ActionButtons({
 // Main Component
 // =============================================================
 
-export default function BookingDetail({
-  booking,
-  userRole,
-  userId,
-  drivers = [],
-}: BookingDetailProps) {
+export default function BookingDetail({ booking, userRole, userId, drivers = [] }: BookingDetailProps) {
   const vehicle = booking.vehicles;
   const renter = booking.profiles;
 
   // Supabase mengembalikan ARRAY untuk relasi one-to-many.
   // Normalize ke object tunggal agar tidak error saat akses .status, .replace(), dll.
   const rawPayments = booking.payments;
-  const payment = Array.isArray(rawPayments)
-    ? (rawPayments[0] ?? null)
-    : (rawPayments ?? null);
+  const payment = Array.isArray(rawPayments) ? (rawPayments[0] ?? null) : (rawPayments ?? null);
 
   const rawDelivery = booking.delivery_schedules;
-  const delivery = Array.isArray(rawDelivery)
-    ? (rawDelivery[0] ?? null)
-    : (rawDelivery ?? null);
+  const delivery = Array.isArray(rawDelivery) ? (rawDelivery[0] ?? null) : (rawDelivery ?? null);
 
-  const primaryImage =
-    vehicle?.vehicle_images?.find((img) => img.is_primary) ??
-    vehicle?.vehicle_images?.[0];
+  const primaryImage = vehicle?.vehicle_images?.find((img) => img.is_primary) ?? vehicle?.vehicle_images?.[0];
 
-  const days = Math.max(
-    1,
-    Math.ceil(
-      (new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  );
+  const days = Math.max(1, Math.ceil((new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) / (1000 * 60 * 60 * 24)));
 
   return (
     <div className="space-y-6">
       {/* Back */}
-      <Link
-        href="/bookings"
-        className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-primary"
-      >
+      <Link href="/bookings" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-primary">
         <ArrowLeft className="h-4 w-4" />
         Kembali ke daftar booking
       </Link>
@@ -248,7 +173,6 @@ export default function BookingDetail({
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* ======== LEFT COLUMN ======== */}
         <div className="space-y-5">
-
           {/* Kendaraan */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-muted uppercase tracking-wide">
@@ -256,13 +180,9 @@ export default function BookingDetail({
             </h2>
             <div className="flex gap-4">
               {primaryImage ? (
-                <img
-                  src={primaryImage.image_url}
-                  alt={`${vehicle.brand} ${vehicle.model}`}
-                  className="h-24 w-32 flex-shrink-0 rounded-xl object-cover"
-                />
+                <img src={primaryImage.image_url} alt={`${vehicle.brand} ${vehicle.model}`} className="h-24 w-32 shrink-0 rounded-xl object-cover" />
               ) : (
-                <div className="flex h-24 w-32 flex-shrink-0 items-center justify-center rounded-xl bg-card-muted">
+                <div className="flex h-24 w-32 shrink-0 items-center justify-center rounded-xl bg-card-muted">
                   <Car className="h-8 w-8 text-subtle" />
                 </div>
               )}
@@ -273,10 +193,7 @@ export default function BookingDetail({
                 <p className="text-sm text-muted">
                   {vehicle.year} • {vehicle.color} • {vehicle.plate_number}
                 </p>
-                <Link
-                  href={`/vehicles/${vehicle.id}`}
-                  className="text-xs text-primary hover:underline"
-                >
+                <Link href={`/vehicles/${vehicle.id}`} className="text-xs text-primary hover:underline">
                   Lihat detail kendaraan →
                 </Link>
               </div>
@@ -289,45 +206,21 @@ export default function BookingDetail({
               <Calendar className="h-4 w-4" /> Periode Sewa
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <InfoRow
-                icon={Calendar}
-                label="Tanggal Mulai"
-                value={formatDate(booking.start_date)}
-              />
-              <InfoRow
-                icon={Calendar}
-                label="Tanggal Selesai"
-                value={formatDate(booking.end_date)}
-              />
-              <InfoRow
-                icon={Clock}
-                label="Durasi"
-                value={`${days} hari`}
-              />
-              <InfoRow
-                icon={CreditCard}
-                label="Total Harga"
-                value={
-                  <span className="text-primary font-bold">
-                    {formatCurrency(booking.total_price)}
-                  </span>
-                }
-              />
+              <InfoRow icon={Calendar} label="Tanggal Mulai" value={formatDate(booking.start_date)} />
+              <InfoRow icon={Calendar} label="Tanggal Selesai" value={formatDate(booking.end_date)} />
+              <InfoRow icon={Clock} label="Durasi" value={`${days} hari`} />
+              <InfoRow icon={CreditCard} label="Total Harga" value={<span className="text-primary font-bold">{formatCurrency(booking.total_price)}</span>} />
             </div>
 
             {booking.deposit_amount > 0 && (
               <div className="mt-4 rounded-xl bg-card-muted p-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted">Deposit (DP)</span>
-                  <span className="font-semibold text-warning">
-                    {formatCurrency(booking.deposit_amount)}
-                  </span>
+                  <span className="font-semibold text-warning">{formatCurrency(booking.deposit_amount)}</span>
                 </div>
                 <div className="mt-1.5 flex justify-between text-sm">
                   <span className="text-muted">Sisa Pembayaran</span>
-                  <span className="font-semibold">
-                    {formatCurrency(booking.total_price - booking.deposit_amount)}
-                  </span>
+                  <span className="font-semibold">{formatCurrency(booking.total_price - booking.deposit_amount)}</span>
                 </div>
               </div>
             )}
@@ -339,11 +232,7 @@ export default function BookingDetail({
               <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-muted uppercase tracking-wide">
                 <MapPin className="h-4 w-4" /> Pengantaran
               </h2>
-              <InfoRow
-                icon={MapPin}
-                label="Alamat Pengantaran"
-                value={booking.delivery_address}
-              />
+              <InfoRow icon={MapPin} label="Alamat Pengantaran" value={booking.delivery_address} />
 
               {delivery && (
                 <div className="mt-4 space-y-2">
@@ -353,9 +242,7 @@ export default function BookingDetail({
                       <Truck className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">
-                        {delivery.profiles?.full_name ?? 'Driver'}
-                      </p>
+                      <p className="text-sm font-medium">{delivery.profiles?.full_name ?? 'Driver'}</p>
                       {delivery.profiles?.phone && (
                         <p className="flex items-center gap-1 text-xs text-muted">
                           <Phone className="h-3 w-3" />
@@ -378,11 +265,7 @@ export default function BookingDetail({
               )}
 
               {/* Tampilkan form Assign Driver jika owner/admin dan belum ada driver yang diassign */}
-              {!delivery &&
-                (userRole === 'admin' || userRole === 'owner') &&
-                ['confirmed', 'paid'].includes(booking.status) && (
-                  <AssignDriverForm bookingId={booking.id} drivers={drivers} />
-              )}
+              {!delivery && (userRole === 'admin' || userRole === 'owner') && ['confirmed', 'paid'].includes(booking.status) && <AssignDriverForm bookingId={booking.id} drivers={drivers} />}
             </div>
           )}
 
@@ -419,39 +302,23 @@ export default function BookingDetail({
             </div>
           )}
 
-          {/* Payment Info — placeholder untuk Dev B */}
+          {/* Payment Section — Dev B */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-muted uppercase tracking-wide">
               <CreditCard className="h-4 w-4" /> Pembayaran
             </h2>
             {payment ? (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted">Status</span>
-                  <span className="font-semibold capitalize">{payment.status.replace('_', ' ')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Jumlah</span>
-                  <span className="font-semibold">{formatCurrency(payment.amount)}</span>
-                </div>
-                {payment.payment_method && (
-                  <div className="flex justify-between">
-                    <span className="text-muted">Metode</span>
-                    <span className="font-semibold capitalize">
-                      {payment.payment_method.replace('_', ' ')}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <PaymentConfirm payment={payment} />
             ) : (
               <p className="text-sm text-muted">
                 {booking.status === 'pending'
                   ? 'Pembayaran dapat dilakukan setelah booking dikonfirmasi oleh pemilik.'
-                  : 'Belum ada data pembayaran.'}
+                  : booking.status === 'confirmed'
+                    ? 'Silakan upload bukti pembayaran di bawah.'
+                    : 'Belum ada data pembayaran.'}
               </p>
             )}
-            {/* DEV B: Tambahkan PaymentForm di sini setelah booking confirmed */}
-            {/* {booking.status === 'confirmed' && !payment && <PaymentForm bookingId={booking.id} />} */}
+            {booking.status === 'confirmed' && !payment && <PaymentForm bookingId={booking.id} totalPrice={booking.total_price} />}
           </div>
 
           {/* Action Buttons */}
@@ -461,9 +328,7 @@ export default function BookingDetail({
         {/* ======== RIGHT COLUMN: Status Timeline ======== */}
         <div className="space-y-5">
           <div className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="mb-5 text-sm font-semibold text-muted uppercase tracking-wide">
-              Status Booking
-            </h2>
+            <h2 className="mb-5 text-sm font-semibold text-muted uppercase tracking-wide">Status Booking</h2>
             <BookingStatusStepper status={booking.status} />
           </div>
 

@@ -2,34 +2,35 @@
 
 ## Status Saat Ini (Sudah Selesai ✅)
 
-| Fitur | Status | File Utama |
-|-------|--------|-----------|
-| Auth (Login/Register) | ✅ Done | `actions/auth.ts`, `app/(auth)/` |
-| RBAC Middleware | ✅ Done | `middleware.ts`, `lib/auth-server.ts` |
-| CRUD Kendaraan (Owner) | ✅ Done | `actions/vehicles.ts`, `lib/db/vehicles.ts` |
-| Upload Foto Kendaraan | ✅ Done | `components/vehicles/image-upload.tsx` |
-| Browse Kendaraan (Public) | ✅ Done | `app/(main)/vehicles/` |
-| Dashboard Layout + Routing | ✅ Done | `app/(main)/dashboard/` |
+| Fitur                       | Status  | File Utama                                         |
+| --------------------------- | ------- | -------------------------------------------------- |
+| Auth (Login/Register)       | ✅ Done | `actions/auth.ts`, `app/(auth)/`                   |
+| RBAC Middleware             | ✅ Done | `middleware.ts`, `lib/auth-server.ts`              |
+| CRUD Kendaraan (Owner)      | ✅ Done | `actions/vehicles.ts`, `lib/db/vehicles.ts`        |
+| Upload Foto Kendaraan       | ✅ Done | `components/vehicles/image-upload.tsx`             |
+| Browse Kendaraan (Public)   | ✅ Done | `app/(main)/vehicles/`                             |
+| Dashboard Layout + Routing  | ✅ Done | `app/(main)/dashboard/`                            |
 | Dashboard Placeholder Pages | ✅ Done | `dashboard/admin/`, `owner/`, `renter/`, `driver/` |
-| Database Schema + RLS | ✅ Done | `supabase/migrations/` |
+| Database Schema + RLS       | ✅ Done | `supabase/migrations/`                             |
 
 ## Fitur yang Masih Harus Dikerjakan 🔨
 
-| Fitur | Prioritas | Estimasi |
-|-------|-----------|----------|
-| **Booking Flow** (create, list, detail, cancel) | 🔴 Tinggi | Besar |
-| **Payment** (upload bukti, konfirmasi) | 🔴 Tinggi | Sedang |
-| **Delivery/Pengantaran** (assign driver, status) | 🟡 Sedang | Sedang |
-| **Review & Rating** | 🟡 Sedang | Kecil-Sedang |
-| **Dashboard Enhancement** (statistik nyata, bukan hardcode 0) | 🟡 Sedang | Sedang |
-| **Add-ons/Layanan Tambahan** | 🟢 Rendah | Kecil |
-| **Polish UI/UX** | 🟢 Rendah | Sedang |
+| Fitur                                                         | Prioritas | Estimasi     |
+| ------------------------------------------------------------- | --------- | ------------ |
+| **Booking Flow** (create, list, detail, cancel)               | 🔴 Tinggi | Besar        |
+| **Payment** (upload bukti, konfirmasi)                        | 🔴 Tinggi | Sedang       |
+| **Delivery/Pengantaran** (assign driver, status)              | 🟡 Sedang | Sedang       |
+| **Review & Rating**                                           | 🟡 Sedang | Kecil-Sedang |
+| **Dashboard Enhancement** (statistik nyata, bukan hardcode 0) | 🟡 Sedang | Sedang       |
+| **Add-ons/Layanan Tambahan**                                  | 🟢 Rendah | Kecil        |
+| **Polish UI/UX**                                              | 🟢 Rendah | Sedang       |
 
 ---
 
 ## 🧑‍💻 Pembagian: Dev A vs Dev B
 
 ### Prinsip Pembagian
+
 - **Dev A**: Mengerjakan **Booking + Delivery** (flow penyewaan end-to-end)
 - **Dev B**: Mengerjakan **Payment + Review + Dashboard Enhancement**
 - Pembagian ini memastikan **TIDAK ADA file yang dikerjakan 2 orang bersamaan**
@@ -39,6 +40,7 @@
 ## Dev A — Booking & Delivery Flow
 
 ### Tanggung Jawab
+
 Seluruh flow penyewa memesan kendaraan sampai kendaraan diantar.
 
 ### 📁 File/Folder Boundary (HANYA Dev A yang boleh edit)
@@ -90,6 +92,7 @@ src/
 ### Checklist Dev A
 
 #### Booking — Server Actions (`actions/bookings.ts`)
+
 - [x] `createBooking(vehicleId, startDate, endDate, deliveryAddress, notes)`
   - ✅ Validasi: tanggal tidak overlap dengan booking lain
   - ✅ Hitung `total_price` = `daily_rate × jumlah_hari` (+ weekly rate jika ≥7 hari)
@@ -99,19 +102,21 @@ src/
 - [x] `completeBooking(bookingId)` — mark sebagai selesai
 - [x] `getMyBookings()` — list booking milik penyewa yang login
 - [x] `getOwnerBookings()` — list booking untuk kendaraan milik owner
-- [x] `calculatePriceBreakdown(vehicleId, start, end)` — *bonus*: helper kalkulasi harga untuk preview real-time di form
+- [x] `calculatePriceBreakdown(vehicleId, start, end)` — _bonus_: helper kalkulasi harga untuk preview real-time di form
 
 #### Booking — Data Access (`lib/db/bookings.ts`)
+
 - [x] `insertBooking(data)` — insert ke tabel bookings
 - [x] `getBookingById(id)` — join dengan vehicles, profiles, payments, delivery_schedules
 - [x] `getBookingsByRenter(renterId)` — filter by renter_id
 - [x] `getBookingsByVehicle(vehicleId)` — filter by vehicle_id
-- [x] `getBookingsByOwner(ownerId)` — *bonus*: ambil semua booking kendaraan milik owner
+- [x] `getBookingsByOwner(ownerId)` — _bonus_: ambil semua booking kendaraan milik owner
 - [x] `updateBookingStatus(id, status)`
 - [x] `checkDateOverlap(vehicleId, startDate, endDate)` — cek konflik tanggal (hanya cek status aktif)
-- [x] `countBookingsByRenter(renterId, status?)` — *bonus*: untuk dashboard stats
+- [x] `countBookingsByRenter(renterId, status?)` — _bonus_: untuk dashboard stats
 
 #### Booking — UI Pages
+
 - [x] `bookings/page.tsx` — List booking user dengan filter status per tab
 - [x] `bookings/[id]/page.tsx` — Detail booking dengan auth guard & permission check
 - [x] `vehicles/[id]/booking/page.tsx` — Halaman booking per kendaraan (vehicle summary + BookingForm + auth guard)
@@ -120,27 +125,32 @@ src/
 > **File `vehicles/[id]/page.tsx` adalah SHARED FILE** — Dev A hanya boleh **menambahkan tombol/link "Booking Sekarang"** di halaman ini. Jangan ubah struktur atau styling yang sudah ada. Koordinasikan dengan Dev B jika Dev B juga perlu edit file ini.
 
 #### Booking — Components
+
 - [x] `booking-form.tsx` — Form pilih tanggal, alamat antar, notes, kalkulasi harga real-time + weekly rate
 - [x] `booking-card.tsx` — Card clickable untuk list booking (thumbnail, status badge, tanggal, harga)
 - [x] `booking-status.tsx` — `BookingStatusBadge` (compact) + `BookingStatusStepper` (timeline visual)
 - [x] `booking-detail.tsx` — Full detail view dengan action buttons berbasis role (cancel/confirm/complete)
 
 #### Delivery — Server Actions (`actions/delivery.ts`)
+
 - [x] `assignDriver(bookingId, driverId)` — assign pengantar ke booking (hanya admin/owner)
 - [x] `updateDeliveryStatus(deliveryId, status)` — update status pengantaran (otomatis update booking status ke `active` saat `delivered`)
 - [x] `getDriverDeliveries()` — list jadwal untuk driver yang login
 
 #### Delivery — Data Access (`lib/db/delivery.ts`) ← NEW FILE ✅ CREATED
+
 - [x] `insertDeliverySchedule(data)`
 - [x] `getDeliveryByBooking(bookingId)`
 - [x] `getDeliveriesByDriver(driverId)`
 - [x] `updateDeliveryStatus(id, status)` — otomatis set `completed_at` saat status = `completed`
 
 #### Delivery — UI
+
 - [x] Update `dashboard/driver/page.tsx` — real stats (hari ini/aktif/selesai) + list DeliveryCard aktif
 - [x] `dashboard/driver/deliveries/page.tsx` — halaman semua deliveries dengan filter status
 
 #### Delivery — Components
+
 - [x] `delivery-card.tsx` — Card interaktif dengan tombol update status (mulai antar → terkirim → selesai)
 - [x] `delivery-status.tsx` — `DeliveryStatusBadge` badge status pengantaran
 
@@ -148,6 +158,7 @@ src/
 
 > [!NOTE]
 > **Progress Dev A sampai 2026-06-17 (Final):**
+>
 > - Semua layer backend & UI Booking + Delivery sudah selesai ✅
 > - Bug fix: normalisasi Supabase array response di `booking-detail.tsx` ✅
 > - `dashboard/owner/bookings/page.tsx` — halaman owner untuk melihat & konfirmasi/tolak pesanan masuk ✅
@@ -161,6 +172,7 @@ src/
 ## Dev B — Payment, Review & Dashboard
 
 ### Tanggung Jawab
+
 Pembayaran setelah booking dikonfirmasi, review setelah booking selesai, dan dashboard statistik yang real (bukan hardcode).
 
 ### 📁 File/Folder Boundary (HANYA Dev B yang boleh edit)
@@ -217,12 +229,14 @@ src/
 ### Checklist Dev B
 
 #### Payment — Server Actions (`actions/payments.ts`)
+
 - [ ] `uploadPaymentProof(bookingId, proofFile)` — upload bukti ke Supabase Storage
 - [ ] `confirmPayment(paymentId)` — admin/owner konfirmasi, status → `confirmed`
 - [ ] `getPaymentByBooking(bookingId)` — get payment info
 - [ ] `refundPayment(paymentId)` — set status → `refunded` (jika dibatalkan)
 
 #### Payment — Data Access (`lib/db/payments.ts`)
+
 - [ ] `insertPayment(data)` — insert payment record
 - [ ] `getPaymentById(id)`
 - [ ] `getPaymentByBookingId(bookingId)`
@@ -230,17 +244,20 @@ src/
 - [ ] `updatePaymentStatus(id, status, confirmedAt?)`
 
 #### Payment — Components
+
 - [ ] `payment-form.tsx` — Upload bukti bayar (mirip image-upload tapi untuk payment proof)
 - [ ] `payment-status.tsx` — Badge: unpaid → pending_confirmation → confirmed
 - [ ] `payment-confirm.tsx` — Tombol & modal untuk admin/owner konfirmasi
 
 #### Review — Server Actions (`actions/reviews.ts`)
+
 - [ ] `createReview(bookingId, vehicleId, rating, comment)` — hanya reviewer
 - [ ] `updateReview(reviewId, rating, comment)`
 - [ ] `deleteReview(reviewId)`
 - [ ] `getVehicleReviews(vehicleId)` — list review untuk 1 kendaraan
 
 #### Review — Data Access (`lib/db/reviews.ts`)
+
 - [ ] `insertReview(data)`
 - [ ] `getReviewsByVehicle(vehicleId)` — join dengan profiles untuk nama reviewer
 - [ ] `getReviewByBooking(bookingId)` — cek apakah sudah review
@@ -249,11 +266,13 @@ src/
 - [ ] `getAverageRating(vehicleId)` — hitung rata-rata rating
 
 #### Review — Components
+
 - [ ] `review-form.tsx` — Form rating (1-5 bintang) + textarea komentar
 - [ ] `review-card.tsx` — Display 1 review (nama, rating stars, komentar, tanggal)
 - [ ] `review-list.tsx` — List semua review per kendaraan + average rating
 
 #### Dashboard Enhancements
+
 - [ ] `dashboard/admin/page.tsx` — Tampilkan real stats:
   - Total users, total kendaraan, total booking, total pendapatan
   - Table booking terbaru
@@ -265,6 +284,7 @@ src/
   - Total booking, booking aktif (dari database, bukan hardcode 0)
 
 #### Dashboard Sub-Pages (Admin)
+
 - [ ] `admin/bookings/page.tsx` — Admin lihat & manage semua booking
 - [ ] `admin/payments/page.tsx` — Admin konfirmasi pembayaran masuk
 - [ ] `admin/users/page.tsx` — Admin lihat & manage users
@@ -275,15 +295,15 @@ src/
 
 File-file ini **mungkin perlu diedit oleh kedua developer**. Atur agar TIDAK dikerjakan bersamaan:
 
-| File | Dev A boleh edit | Dev B boleh edit | Cara handle |
-|------|------------------|------------------|-------------|
-| `app/(main)/vehicles/[id]/page.tsx` | Tambah tombol "Booking" | Tambah section "Reviews" | **Dev A duluan**, Dev B merge setelahnya |
-| `app/(main)/dashboard/layout.tsx` | Tambah link "Deliveries" di sidebar driver | Tambah link sub-pages di sidebar admin/owner | **Buat di branch masing-masing**, merge satu per satu |
-| `types/database.ts` | Tambah type booking/delivery | Tambah type payment/review | **Regenerate bareng** dari Supabase, jangan edit manual |
-| `supabase/migrations/*` | Migration baru untuk delivery | Migration baru untuk payment/review | **Beda file migration**, pakai timestamp berbeda |
-| `middleware.ts` | Mungkin perlu update route protection | Mungkin perlu update route protection | **Koordinasikan chat dulu** |
-| `globals.css` | ❌ Jangan edit | ❌ Jangan edit | Sudah stabil, jangan diubah kecuali terpaksa |
-| `app/(main)/layout.tsx` | ❌ Jangan edit | ❌ Jangan edit | Sudah stabil |
+| File                                | Dev A boleh edit                           | Dev B boleh edit                             | Cara handle                                             |
+| ----------------------------------- | ------------------------------------------ | -------------------------------------------- | ------------------------------------------------------- |
+| `app/(main)/vehicles/[id]/page.tsx` | Tambah tombol "Booking"                    | Tambah section "Reviews"                     | **Dev A duluan**, Dev B merge setelahnya                |
+| `app/(main)/dashboard/layout.tsx`   | Tambah link "Deliveries" di sidebar driver | Tambah link sub-pages di sidebar admin/owner | **Buat di branch masing-masing**, merge satu per satu   |
+| `types/database.ts`                 | Tambah type booking/delivery               | Tambah type payment/review                   | **Regenerate bareng** dari Supabase, jangan edit manual |
+| `supabase/migrations/*`             | Migration baru untuk delivery              | Migration baru untuk payment/review          | **Beda file migration**, pakai timestamp berbeda        |
+| `middleware.ts`                     | Mungkin perlu update route protection      | Mungkin perlu update route protection        | **Koordinasikan chat dulu**                             |
+| `globals.css`                       | ❌ Jangan edit                             | ❌ Jangan edit                               | Sudah stabil, jangan diubah kecuali terpaksa            |
+| `app/(main)/layout.tsx`             | ❌ Jangan edit                             | ❌ Jangan edit                               | Sudah stabil                                            |
 
 ---
 
@@ -323,6 +343,7 @@ main (stable)
    - Dev B pull main terbaru, resolve konflik jika ada, lalu merge `feature/payment-review`
 
 ### Kapan Boleh Commit ke Main Langsung?
+
 - Typo fix kecil
 - Update README
 - File konfigurasi yang tidak berkaitan (`.env.example`, dll)
@@ -333,16 +354,17 @@ main (stable)
 
 ### Minggu Ini (Dev A & Dev B paralel)
 
-| Hari | Dev A (Booking + Delivery) | Dev B (Payment + Review + Dashboard) |
-|------|----------------------------|--------------------------------------|
-| 1-2 | `lib/db/bookings.ts` + `actions/bookings.ts` | `lib/db/payments.ts` + `actions/payments.ts` |
-| 3 | `booking-form.tsx` + `booking-card.tsx` | `payment-form.tsx` + `payment-status.tsx` |
-| 4 | `bookings/page.tsx` + `bookings/[id]/page.tsx` | `lib/db/reviews.ts` + `actions/reviews.ts` |
-| 5 | `delivery.ts` actions + DB | `review-form.tsx` + `review-card.tsx` |
-| 6 | Driver dashboard + delivery UI | Dashboard admin/owner/renter enhancements |
-| 7 | Testing + bug fix | Testing + bug fix |
+| Hari | Dev A (Booking + Delivery)                     | Dev B (Payment + Review + Dashboard)         |
+| ---- | ---------------------------------------------- | -------------------------------------------- |
+| 1-2  | `lib/db/bookings.ts` + `actions/bookings.ts`   | `lib/db/payments.ts` + `actions/payments.ts` |
+| 3    | `booking-form.tsx` + `booking-card.tsx`        | `payment-form.tsx` + `payment-status.tsx`    |
+| 4    | `bookings/page.tsx` + `bookings/[id]/page.tsx` | `lib/db/reviews.ts` + `actions/reviews.ts`   |
+| 5    | `delivery.ts` actions + DB                     | `review-form.tsx` + `review-card.tsx`        |
+| 6    | Driver dashboard + delivery UI                 | Dashboard admin/owner/renter enhancements    |
+| 7    | Testing + bug fix                              | Testing + bug fix                            |
 
 ### Minggu Berikutnya (Integrasi)
+
 - **Merge Dev A ke main** → Test booking flow end-to-end
 - **Merge Dev B ke main** → Test payment + review
 - **Bersama**: Polish UI, fix bugs, integrasi antar fitur
@@ -360,7 +382,7 @@ graph TD
     D --> F["🔨 Review & Rating<br/>(Dev B)"]
     B --> G["🔨 Dashboard Stats<br/>(Dev B)"]
     C --> G
-    
+
     style A fill:#22c55e,color:#fff
     style B fill:#22c55e,color:#fff
     style C fill:#3b82f6,color:#fff
