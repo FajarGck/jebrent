@@ -32,6 +32,11 @@ const STATUS_CONFIG: Record<PaymentStatus, StatusConfig> = {
     color: "bg-danger/10 text-danger border-danger/30",
     icon: XCircle,
   },
+  rejected: {
+    label: PAYMENT_STATUS_LABELS.rejected,
+    color: "bg-danger/10 text-danger border-danger/30",
+    icon: XCircle,
+  },
 };
 
 type BadgeProps = {

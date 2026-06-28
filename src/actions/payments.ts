@@ -58,24 +58,11 @@ export async function uploadPaymentProof(formData: FormData): Promise<PaymentAct
   } else if (booking.status === 'pending') {
     paymentType = 'dp';
     amount = Number(booking.deposit_amount);
-  } else if (booking.status === 'in_delivery') {
+  } else if (booking.status === 'in_delivery' || booking.status === 'active') {
     paymentType = 'final';
     amount = Number(booking.total_price) - Number(booking.deposit_amount);
   } else {
     return { error: 'Pembayaran tidak diizinkan pada status pemesanan saat ini' };
-  }
-
-  // Cek apakah sudah ada payment dengan tipe yang sama yang masih pending
-  const { data: existingPayment } = await supabase
-    .from('payments')
-    .select('id, status')
-    .eq('booking_id', bookingId)
-    .eq('payment_type', paymentType)
-    .eq('status', 'pending_confirmation')
-    .maybeSingle();
-
-  if (existingPayment) {
-    return { error: 'Bukti pembayaran tipe ini sudah diupload dan sedang menunggu konfirmasi' };
   }
 
   // Upload ke Supabase Storage
@@ -87,6 +74,45 @@ export async function uploadPaymentProof(formData: FormData): Promise<PaymentAct
   if (uploadErr) return { error: `Gagal upload: ${uploadErr.message}` };
 
   const { data: urlData } = supabase.storage.from('payment-proofs').getPublicUrl(path);
+
+  // Cek apakah sudah ada payment dengan tipe yang sama
+  const { data: existingPayment } = await (supabase
+    .from('payments') as any)
+    .select('id, status')
+    .eq('booking_id', bookingId)
+    .eq('payment_type', paymentType)
+    .maybeSingle();
+
+  if (existingPayment) {
+    if (existingPayment.status === 'pending_confirmation') {
+      return { error: 'Bukti pembayaran tipe ini sudah diupload dan sedang menunggu konfirmasi' };
+    }
+    if (existingPayment.status === 'confirmed') {
+      return { error: 'Pembayaran ini sudah dikonfirmasi sebelumnya' };
+    }
+
+    // Jika statusnya 'unpaid' atau 'rejected', kita perbarui record yang sudah ada!
+    const { error: updateErr } = await (supabase
+      .from('payments') as any)
+      .update({
+        payment_method: paymentMethod,
+        amount: amount,
+        status: 'pending_confirmation',
+        proof_image_url: urlData.publicUrl,
+        paid_at: new Date().toISOString(),
+        confirmed_at: null,
+        confirmed_by: null,
+      })
+      .eq('id', existingPayment.id);
+
+    if (updateErr) {
+      return { error: `Gagal memperbarui bukti pembayaran: ${updateErr.message}` };
+    }
+
+    revalidatePath(`/bookings/${bookingId}`);
+    revalidatePath('/dashboard/admin/payments');
+    return { success: true, paymentId: existingPayment.id };
+  }
 
   // Insert payment record
   const { data: payment, error: insertErr } = await insertPayment({
@@ -149,15 +175,53 @@ export async function confirmPayment(paymentId: string): Promise<PaymentActionRe
     nextBookingStatus = 'in_delivery';
     nextVehicleStatus = 'rented';
 
-    // Buat jadwal pengantaran otomatis jam 7 pagi di start_date
+    // Ambil jam pengantaran otomatis dari settings
+    const { data: settingData } = await (supabase
+      .from('system_settings') as any)
+      .select('value')
+      .eq('key', 'auto_delivery_hour')
+      .maybeSingle();
+    const autoHour = settingData ? parseInt(settingData.value, 10) : 7;
+
     const deliveryTime = new Date(booking.start_date);
-    deliveryTime.setHours(7, 0, 0, 0);
+    deliveryTime.setHours(autoHour, 0, 0, 0);
+
+    // Load-balancing driver assignment
+    const { data: drivers } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'driver');
+
+    let assignedDriverId = null;
+
+    if (drivers && drivers.length > 0) {
+      const startOfDay = new Date(deliveryTime);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(deliveryTime);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data: activeSchedules } = await supabase
+        .from('delivery_schedules')
+        .select('driver_id')
+        .gte('departure_time', startOfDay.toISOString())
+        .lte('departure_time', endOfDay.toISOString());
+
+      const driverLoads = drivers.map((d: any) => {
+        const load = activeSchedules?.filter((s: any) => s.driver_id === d.id).length || 0;
+        return { id: d.id, load };
+      });
+
+      // Urutkan berdasarkan beban terkecil (load-balanced round-robin)
+      driverLoads.sort((a, b) => a.load - b.load);
+      assignedDriverId = driverLoads[0].id;
+    }
 
     await (supabase.from('delivery_schedules') as any).insert({
       booking_id: booking.id,
+      driver_id: assignedDriverId,
       departure_time: deliveryTime.toISOString(),
       delivery_status: 'assigned',
-      notes: 'Jadwal otomatis dibuat sistem pada pukul 07:00 WIB',
+      notes: `Jadwal otomatis dibuat sistem pada pukul ${autoHour.toString().padStart(2, '0')}:00 WIB`,
     });
 
   } else if (payment.payment_type === 'final') {
@@ -214,8 +278,8 @@ export async function rejectPayment(paymentId: string): Promise<PaymentActionRes
     return { error: 'Hanya admin yang dapat menolak pembayaran' };
   }
 
-  // Reset ke unpaid agar penyewa bisa upload ulang
-  const { error } = await updatePaymentStatus(paymentId, 'unpaid');
+  // Reset ke rejected agar penyewa bisa upload ulang
+  const { error } = await updatePaymentStatus(paymentId, 'rejected' as any);
   if (error) return { error };
 
   revalidatePath(`/bookings/${payment.booking_id}`);

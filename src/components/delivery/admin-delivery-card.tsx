@@ -30,6 +30,27 @@ export default function AdminDeliveryCard({ delivery }: AdminDeliveryCardProps) 
   const renter = booking?.profiles;
   const driver = delivery.profiles;
 
+  function getWhatsAppLink(driverName: string, phoneNumber: string) {
+    let cleanPhone = phoneNumber.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62' + cleanPhone.slice(1);
+    }
+
+    const renterName = renter?.full_name || 'Pelanggan';
+    const vehicleName = vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Kendaraan';
+    const plate = vehicle?.plate_number || '';
+    
+    let text = `Halo ${driverName}, mohon segera mengantarkan kendaraan ${vehicleName} (Plat: ${plate}) untuk penyewa ${renterName}.`;
+    
+    if ((booking as any)?.delivery_latitude && (booking as any)?.delivery_longitude) {
+      text += `\n\nLokasi pengantaran (Share Lok): https://www.google.com/maps?q=${(booking as any).delivery_latitude},${(booking as any).delivery_longitude}`;
+    } else if (booking?.delivery_address) {
+      text += `\n\nAlamat pengantaran: ${booking.delivery_address}`;
+    }
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  }
+
   function handleMarkDelivered() {
     setError(null);
     startTransition(async () => {
@@ -97,7 +118,19 @@ export default function AdminDeliveryCard({ delivery }: AdminDeliveryCardProps) 
               {driver ? (
                 <strong className="text-foreground">
                   {driver.full_name}
-                  {driver.phone && ` (${driver.phone})`}
+                  {driver.phone && (
+                    <>
+                      {' • '}
+                      <a
+                        href={getWhatsAppLink(driver.full_name, driver.phone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-semibold"
+                      >
+                        {driver.phone} ↗
+                      </a>
+                    </>
+                  )}
                 </strong>
               ) : (
                 <span className="text-subtle font-italic">Belum ditugaskan</span>

@@ -302,3 +302,32 @@ export async function adminCompleteDelivery(
 
   return { success: true };
 }
+
+export async function getAutoDeliveryHour(): Promise<number> {
+  const supabase = await createClient();
+  const { data } = await (supabase
+    .from('system_settings') as any)
+    .select('value')
+    .eq('key', 'auto_delivery_hour')
+    .maybeSingle();
+  return data ? parseInt(data.value, 10) : 7;
+}
+
+export async function updateAutoDeliveryHour(hour: number): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Unauthorized' };
+
+  const role = await resolveUserRole(supabase, user);
+  if (role !== 'admin') return { error: 'Hanya admin yang dapat mengubah pengaturan ini' };
+
+  if (hour < 0 || hour > 23) return { error: 'Jam harus antara 0 sampai 23' };
+
+  const { error } = await (supabase.from('system_settings') as any)
+    .upsert({ key: 'auto_delivery_hour', value: hour.toString(), updated_at: new Date().toISOString() });
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/dashboard/admin/deliveries');
+  return { success: true };
+}

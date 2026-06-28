@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getAllDeliveries } from '@/lib/db/delivery';
+import { getAutoDeliveryHour } from '@/actions/delivery';
 import AdminDeliveryCard from '@/components/delivery/admin-delivery-card';
+import AutoDeliveryHourSetting from '@/components/delivery/auto-delivery-hour-setting';
 import { Truck } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -36,6 +38,7 @@ export default async function AdminDeliveriesPage({
   const activeFilter = (statusParam ?? 'all') as DeliveryStatus | 'all';
 
   const allDeliveries = await getAllDeliveries();
+  const currentHour = await getAutoDeliveryHour();
   const filtered =
     activeFilter === 'all'
       ? allDeliveries
@@ -44,12 +47,17 @@ export default async function AdminDeliveriesPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Kelola Semua Pengantaran</h1>
-        <p className="mt-1 text-sm text-muted">
-          {allDeliveries.length} total pengantaran di dalam sistem
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Kelola Semua Pengantaran</h1>
+          <p className="mt-1 text-sm text-muted">
+            {allDeliveries.length} total pengantaran di dalam sistem
+          </p>
+        </div>
       </div>
+
+      {/* Settings Card */}
+      <AutoDeliveryHourSetting currentHour={currentHour} />
 
       {/* Filter tabs */}
       {allDeliveries.length > 0 && (

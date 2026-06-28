@@ -97,7 +97,7 @@ export async function createUserByAdminAction(formData: FormData): Promise<AuthR
     return { error: 'Password minimal 6 karakter' };
   }
 
-  const { error } = await (supabase.rpc as any)('create_user_by_admin', {
+  const { data: newUserId, error } = await (supabase.rpc as any)('create_user_by_admin', {
     p_email: email,
     p_password: password,
     p_full_name: fullName,
@@ -105,6 +105,14 @@ export async function createUserByAdminAction(formData: FormData): Promise<AuthR
   });
 
   if (error) return { error: `Gagal mendaftarkan pengguna: ${error.message}` };
+
+  const phone = formData.get('phone') as string | null;
+  if (phone && newUserId) {
+    const { error: phoneErr } = await (supabase.from('profiles') as any)
+      .update({ phone: phone })
+      .eq('id', newUserId);
+    if (phoneErr) console.error("Gagal update phone untuk user baru:", phoneErr.message);
+  }
 
   return { success: true };
 }
@@ -203,6 +211,52 @@ export async function verifyUserKtpAction(
   if (error) {
     return { error: `Gagal mengubah status verifikasi KTP: ${error.message}` };
   }
+
+  revalidatePath('/dashboard/admin/users');
+  return { success: true };
+}
+
+export async function editUserByAdminAction(
+  userId: string,
+  fullName: string,
+  phone: string | null
+): Promise<AuthResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Unauthorized' };
+
+  const role = await resolveUserRole(supabase, user);
+  if (role !== 'admin') return { error: 'Hanya admin yang dapat mengedit pengguna' };
+
+  if (!fullName) return { error: 'Nama lengkap wajib diisi' };
+
+  const { error } = await (supabase.from('profiles') as any)
+    .update({
+      full_name: fullName,
+      phone: phone || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId);
+
+  if (error) return { error: `Gagal mengupdate profil: ${error.message}` };
+
+  revalidatePath('/dashboard/admin/users');
+  return { success: true };
+}
+
+export async function deleteUserByAdminAction(userId: string): Promise<AuthResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Unauthorized' };
+
+  const role = await resolveUserRole(supabase, user);
+  if (role !== 'admin') return { error: 'Hanya admin yang dapat menghapus pengguna' };
+
+  const { error } = await (supabase.rpc as any)('delete_user_by_admin', {
+    p_user_id: userId
+  });
+
+  if (error) return { error: `Gagal menghapus pengguna: ${error.message}` };
 
   revalidatePath('/dashboard/admin/users');
   return { success: true };

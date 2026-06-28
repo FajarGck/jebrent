@@ -74,20 +74,7 @@ function ActionButtons({ booking, userRole, userId }: BookingDetailProps) {
     );
   }
 
-  // Backup manual confirm booking (hanya Admin)
-  if (isAdmin && booking.status === 'pending') {
-    buttons.push(
-      <button
-        key="confirm"
-        onClick={() => handleAction('confirm', () => confirmBooking(booking.id))}
-        disabled={isPending}
-        className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover disabled:opacity-50"
-      >
-        {activeAction === 'confirm' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-        Konfirmasi Pengantaran (Manual)
-      </button>,
-    );
-  }
+
 
   // Admin mengonfirmasi pengembalian (status 'returning')
   if (isAdmin && booking.status === 'returning') {
@@ -149,6 +136,31 @@ export default function BookingDetail({ booking, userRole, userId }: BookingDeta
         <ArrowLeft className="h-4 w-4" />
         Kembali
       </Link>
+
+      {/* Banner Notifikasi Penolakan Pembayaran */}
+      {dpPayment?.status === 'rejected' && isRenter && (
+        <div className="rounded-2xl border border-danger/30 bg-danger/5 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-danger">Bukti Pembayaran DP Ditolak</h3>
+            <p className="text-xs text-danger/80 mt-0.5">
+              Bukti transfer pembayaran DP (25%) yang Anda unggah sebelumnya ditolak oleh admin. Harap periksa nominal transfer dan unggah bukti pembayaran yang valid.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {finalPayment?.status === 'rejected' && isRenter && (
+        <div className="rounded-2xl border border-danger/30 bg-danger/5 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-danger">Bukti Pelunasan Ditolak</h3>
+            <p className="text-xs text-danger/80 mt-0.5">
+              Bukti transfer pelunasan (75%) yang Anda unggah sebelumnya ditolak oleh admin. Harap periksa nominal transfer dan unggah bukti pembayaran yang valid.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -277,17 +289,20 @@ export default function BookingDetail({ booking, userRole, userId }: BookingDeta
             <h2 className="flex items-center gap-2 text-sm font-semibold text-muted uppercase tracking-wide border-b border-border pb-2">
               <CreditCard className="h-4 w-4" /> Pembayaran DP (25%)
             </h2>
-            {dpPayment ? (
-              <PaymentConfirm payment={dpPayment} isAdmin={isAdmin} />
-            ) : (
+            {(!dpPayment || dpPayment.status === 'rejected' || dpPayment.status === 'unpaid') ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted">
                   Silakan bayar DP sebesar 25% untuk mengaktifkan pemesanan.
                 </p>
+                {dpPayment?.status === 'rejected' && (
+                  <p className="text-xs font-semibold text-danger">Pembayaran DP sebelumnya ditolak admin. Silakan unggah bukti baru.</p>
+                )}
                 {booking.status === 'pending' && isRenter && (
                   <PaymentForm bookingId={booking.id} totalPrice={booking.deposit_amount} paymentType="dp" />
                 )}
               </div>
+            ) : (
+              <PaymentConfirm payment={dpPayment} isAdmin={isAdmin} />
             )}
           </div>
 
@@ -297,17 +312,20 @@ export default function BookingDetail({ booking, userRole, userId }: BookingDeta
               <h2 className="flex items-center gap-2 text-sm font-semibold text-muted uppercase tracking-wide border-b border-border pb-2">
                 <CreditCard className="h-4 w-4" /> Pelunasan Sisa Pembayaran (75%)
               </h2>
-              {finalPayment ? (
-                <PaymentConfirm payment={finalPayment} isAdmin={isAdmin} />
-              ) : (
+              {(!finalPayment || finalPayment.status === 'rejected' || finalPayment.status === 'unpaid') ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">
                     Sisa pelunasan sebesar 75% dari total sewa dibayarkan saat armada diantar.
                   </p>
-                  {booking.status === 'in_delivery' && isRenter && (
+                  {finalPayment?.status === 'rejected' && (
+                    <p className="text-xs font-semibold text-danger">Pembayaran pelunasan sebelumnya ditolak admin. Silakan unggah bukti baru.</p>
+                  )}
+                  {(booking.status === 'in_delivery' || booking.status === 'active') && isRenter && (
                     <PaymentForm bookingId={booking.id} totalPrice={booking.total_price - booking.deposit_amount} paymentType="final" />
                   )}
                 </div>
+              ) : (
+                <PaymentConfirm payment={finalPayment} isAdmin={isAdmin} />
               )}
             </div>
           )}

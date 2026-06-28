@@ -125,6 +125,20 @@ export async function createBooking(
 
   if (!user) return { error: "Anda harus login untuk membuat booking" };
 
+  // Cek status verifikasi KTP renter
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("verification_status")
+    .eq("id", user.id)
+    .single();
+
+  const profile = profileData as { verification_status: string } | null;
+  if (!profile || profile.verification_status !== "verified") {
+    return {
+      error: "Akun Anda belum terverifikasi oleh Admin. Silakan lengkapi profil & unggah KTP Anda di halaman Profil Saya.",
+    };
+  }
+
   // Validasi tanggal
   const start = new Date(input.startDate);
   const end = new Date(input.endDate);
@@ -221,11 +235,11 @@ export async function cancelBooking(
   // Ambil booking untuk verifikasi kepemilikan
   const { data: bookingData } = await supabase
     .from("bookings")
-    .select("renter_id, status")
+    .select("renter_id, status, vehicle_id")
     .eq("id", bookingId)
     .single();
 
-  const booking = bookingData as { renter_id: string; status: string } | null;
+  const booking = bookingData as { renter_id: string; status: string; vehicle_id: string | null } | null;
   if (!booking) return { error: "Booking tidak ditemukan" };
 
   const role = await resolveUserRole(supabase, user);
@@ -243,8 +257,22 @@ export async function cancelBooking(
     };
   }
 
-  const { error } = await updateBookingStatus(bookingId, "cancelled");
-  if (error) return { error };
+  try {
+    if (booking.vehicle_id) {
+      await updateBookingAndVehicleStatus(
+        bookingId,
+        booking.vehicle_id,
+        "cancelled",
+        "available"
+      );
+    } else {
+      const { error } = await updateBookingStatus(bookingId, "cancelled");
+      if (error) return { error };
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Gagal membatalkan booking: ${message}` };
+  }
 
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
