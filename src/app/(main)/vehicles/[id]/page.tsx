@@ -6,8 +6,10 @@ import { Car, Calendar, Gauge, Palette, Hash, User, Clock, Star } from 'lucide-r
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { VehicleDetailGallery } from '@/components/vehicles/vehicle-detail-galery';
-// == DEV B: Import review components here ==
-// import { ReviewList } from '@/components/reviews/review-list';
+import { createClient } from '@/lib/supabase/server';
+import { resolveUserRole } from '@/lib/auth';
+import { ReviewList } from '@/components/reviews/review-list';
+import { getReviewsByVehicle } from '@/lib/db/reviews';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -28,6 +30,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
   const vehicle = await getVehicleById(id);
   if (!vehicle) notFound();
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const role = user ? await resolveUserRole(supabase, user) : null;
+
   const images =
     vehicle.vehicle_images?.sort((a, b) => {
       if (a.is_primary) return -1;
@@ -43,9 +49,10 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
     { icon: Gauge, label: 'Kilometer', value: `${vehicle.mileage.toLocaleString('id-ID')} km` },
   ];
 
-  // == DEV B: Fetch reviews here ==
-  // const reviews = await getReviewsByVehicle(id);
-  // const avgRating = await getAverageRating(id);
+  const reviews = await getReviewsByVehicle(id);
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -92,16 +99,18 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
 
           {/* ============================================================
            *  REVIEW SECTION — Dev B's territory
-           *  Dev B: Replace the placeholder below with <ReviewList />
            *  ============================================================ */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Star className="h-5 w-5 text-warning" />
+              <Star className="h-5 w-5 text-warning fill-warning" />
               <h2 className="text-lg font-semibold">Ulasan</h2>
-              {/* DEV B: Show average rating here, e.g. <span>(4.5 / 5)</span> */}
+              {avgRating && (
+                <span className="text-sm text-muted">
+                  ({avgRating} / 5.0 dari {reviews.length} ulasan)
+                </span>
+              )}
             </div>
-            {/* DEV B: Replace this placeholder with <ReviewList vehicleId={id} reviews={reviews} /> */}
-            <p className="text-sm text-muted text-center py-8">Belum ada ulasan untuk kendaraan ini.</p>
+            <ReviewList reviews={reviews} />
           </div>
         </div>
 
@@ -150,7 +159,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
              *  BOOKING BUTTON — Dev A's territory
              *  Links to /vehicles/[id]/booking where Dev A builds the form
              *  ============================================================ */}
-            {vehicle.status === 'available' && (
+            {vehicle.status === 'available' && role !== 'owner' && role !== 'admin' && (
               <Link
                 href={`/vehicles/${vehicle.id}/booking`}
                 className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary py-3 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-xl"

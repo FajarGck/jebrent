@@ -55,4 +55,4 @@ export const MAX_VEHICLE_IMAGES_SIZE = 5 * 1024 * 1024;
 
 export const VEHICLE_IMAGES_TYPE = ['image/jpeg', 'image/png', 'image/webp'];
 
-export const DEPOSIT_PERCENTAGE = 0.3;
+export const DEPOSIT_PERCENTAGE = 0.25;

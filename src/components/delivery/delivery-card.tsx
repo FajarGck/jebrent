@@ -1,10 +1,8 @@
 'use client';
-// src/components/delivery/delivery-card.tsx
-// Card info pengantaran untuk driver dashboard — Dev A ONLY
 
-import { useTransition, useState } from 'react';
+import { useTransition, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateDeliveryStatus } from '@/actions/delivery';
+import { updateDeliveryStatus, completeDelivery } from '@/actions/delivery';
 import { DeliveryStatusBadge } from './delivery-status';
 import { formatDate } from '@/lib/utils';
 import {
@@ -15,6 +13,8 @@ import {
   Loader2,
   Navigation,
   CheckCircle2,
+  Upload,
+  X,
 } from 'lucide-react';
 import type { DeliveryWithDetails } from '@/types/database';
 
@@ -24,31 +24,69 @@ type DeliveryCardProps = {
 
 export default function DeliveryCard({ delivery }: DeliveryCardProps) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const booking = delivery.bookings;
   const vehicle = booking?.vehicles;
   const renter = booking?.profiles;
 
-  async function handleUpdateStatus(newStatus: 'on_the_way' | 'delivered' | 'completed') {
+  function handleFile(f: File) {
+    setError(null);
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) {
+      setError('Format file harus JPG, PNG, atau WebP');
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError('Ukuran file maksimal 5MB');
+      return;
+    }
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+  }
+
+  function removeFile() {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(null);
+    setPreview(null);
+  }
+
+  function handleStartDelivery() {
     setError(null);
     startTransition(async () => {
       const result = await updateDeliveryStatus({
         deliveryId: delivery.id,
-        status: newStatus,
+        status: 'on_the_way',
       });
-      if (result.error) {
-        setError(result.error);
-      } else {
-        router.refresh();
-      }
+      if (result.error) setError(result.error);
+      else router.refresh();
+    });
+  }
+
+  function handleMarkDelivered() {
+    if (!file) {
+      setError('Upload foto bukti pengantaran terlebih dahulu');
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append('delivery_id', delivery.id);
+      if (vehicle?.id) formData.append('vehicle_id', vehicle.id);
+      formData.append('proof_file', file);
+      const result = await completeDelivery(formData);
+      if (result.error) setError(result.error);
+      else router.refresh();
     });
   }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
-      {/* Header: kendaraan + status */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-primary/10 p-2 text-primary">
@@ -111,58 +149,89 @@ export default function DeliveryCard({ delivery }: DeliveryCardProps) {
         </p>
       )}
 
-      {/* Error */}
-      {error && (
-        <p className="text-xs text-danger">{error}</p>
+      {/* Bukti pengantaran (sudah diupload) */}
+      {delivery.proof_image_url && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted">Bukti Pengantaran</p>
+          <img
+            src={delivery.proof_image_url}
+            alt="Bukti pengantaran"
+            className="max-h-36 w-full rounded-xl border border-border object-contain bg-white"
+          />
+        </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+      {error && <p className="text-xs text-danger">{error}</p>}
+
+      {/* Actions */}
+      <div className="space-y-3 border-t border-border pt-4">
         {delivery.delivery_status === 'assigned' && (
           <button
-            onClick={() => handleUpdateStatus('on_the_way')}
+            onClick={handleStartDelivery}
             disabled={isPending}
             className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-primary-hover disabled:opacity-50"
           >
-            {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Navigation className="h-3.5 w-3.5" />
-            )}
+            {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
             Mulai Pengantaran
           </button>
         )}
 
         {delivery.delivery_status === 'on_the_way' && (
-          <button
-            onClick={() => handleUpdateStatus('delivered')}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-success px-4 py-2 text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-          >
-            {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <>
+            {/* Upload foto bukti */}
+            {!file ? (
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+                onClick={() => inputRef.current?.click()}
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border p-4 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
+              >
+                <Upload className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-xs font-medium">Upload bukti pengantaran</p>
+                  <p className="text-[10px] text-muted">JPG, PNG, WebP • Maks 5MB</p>
+                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                />
+              </div>
             ) : (
-              <CheckCircle2 className="h-3.5 w-3.5" />
+              <div className="relative">
+                <img src={preview!} alt="Preview" className="max-h-36 w-full rounded-xl border border-border object-contain bg-white" />
+                <button type="button" onClick={removeFile} className="absolute right-2 top-2 rounded-lg bg-white/90 p-1 text-danger shadow-sm hover:bg-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             )}
-            Tandai Terkirim
-          </button>
+
+            <button
+              onClick={handleMarkDelivered}
+              disabled={isPending || !file}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-success px-4 py-2 text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
+            >
+              {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              Tandai Terkirim
+            </button>
+          </>
         )}
 
         {delivery.delivery_status === 'delivered' && (
-          <button
-            onClick={() => handleUpdateStatus('completed')}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-success/30 bg-success/10 px-4 py-2 text-xs font-semibold text-success transition-all hover:bg-success/20 disabled:opacity-50"
-          >
-            {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 rounded-xl bg-success/5 border border-success/20 px-3 py-2 text-xs text-success">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Pengantaran selesai
+            {delivery.completed_at && (
+              <span className="text-success/70">
+                • {new Date(delivery.completed_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+              </span>
             )}
-            Selesaikan Tugas
-          </button>
+          </div>
         )}
       </div>
     </div>
   );
 }
+

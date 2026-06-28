@@ -42,6 +42,9 @@ export type CreateBookingInput = {
   endDate: string;         // format: "YYYY-MM-DD"
   durationType: RentalDuration;
   deliveryAddress: string | null;
+  deliveryLatitude?: number | null;
+  deliveryLongitude?: number | null;
+  usageRadius?: number | null;
   notes: string | null;
 };
 

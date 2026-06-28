@@ -109,6 +109,7 @@ export type Payment = {
   paid_at: string | null;
   confirmed_at: string | null;
   confirmed_by: string | null;
+  payment_type: 'dp' | 'final' | 'fine';
   created_at: string;
 };
 
@@ -146,6 +147,7 @@ export type DeliverySchedule = {
   departure_time: string;
   delivery_status: DeliveryStatus;
   notes: string | null;
+  proof_image_url: string | null;
   completed_at: string | null;
   created_at: string;
 };
@@ -170,6 +172,7 @@ export type BookingWithDetails = Booking & {
   };
   profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
   payments: Payment | null;
+  reviews: any;
   delivery_schedules: (DeliverySchedule & {
     profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
   }) | null;

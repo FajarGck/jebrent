@@ -34,23 +34,19 @@ export default function ImageUpload({
       if (!arr.length) return;
 
       const urls = arr.map((f) => URL.createObjectURL(f));
-      setNewFiles((prev) => {
-        const next = [...prev, ...arr];
-        onChange?.(next);
-        return next;
-      });
+      const nextFiles = [...newFiles, ...arr];
+      setNewFiles(nextFiles);
+      onChange?.(nextFiles);
       setPreviews((prev) => [...prev, ...urls]);
     },
-    [remaining, onChange],
+    [remaining, onChange, newFiles],
   );
 
   const removeNew = (index: number) => {
     URL.revokeObjectURL(previews[index]);
-    setNewFiles((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      onChange?.(next);
-      return next;
-    });
+    const nextFiles = newFiles.filter((_, i) => i !== index);
+    setNewFiles(nextFiles);
+    onChange?.(nextFiles);
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 

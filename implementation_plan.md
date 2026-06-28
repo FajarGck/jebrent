@@ -512,3 +512,20 @@ Setelah kamu approve plan ini dan jawab open questions:
 2. **Init shadcn/ui** — Install dan configure properly
 3. **Scaffold folder structure** — Buat semua folder dan boilerplate files
 4. **Mulai Phase 1** — Auth + Layout
+
+---
+
+## Phase 2 Progress: End-to-End Flow (`features/returning`)
+
+### ✅ Completed
+
+| Task | Files Changed | Deskripsi |
+|---|---|---|
+| Fix RLS: driver update booking | `actions/delivery.ts` | Ganti direct DB update → RPC `confirm_booking_transaction` (SECURITY DEFINER, bypass RLS) |
+| Fix `completeBooking()` | `actions/bookings.ts` | Pakai `updateBookingAndVehicleStatus()` RPC → atomic: booking `completed` + vehicle `available` |
+| Return vehicle flow | `actions/bookings.ts`, `booking-detail.tsx` | Renter klik "Kembalikan Kendaraan" (active → returning), Owner/Admin "Konfirmasi Pengembalian" (returning → completed) |
+| Driver upload foto bukti | `actions/delivery.ts`, `delivery-card.tsx`, `lib/db/delivery.ts` | Foto wajib sebelum tandai terkirim. Pakai `completeDelivery(FormData)` |
+| Simplify delivery flow | `delivery-card.tsx`, `actions/delivery.ts` | 3 step → 2 step: `assigned → on_the_way → delivered` (FINAL) |
+| Admin dashboard real stats | `dashboard/admin/page.tsx` | Query real: total users, vehicles, active bookings, revenue |
+| DB migration | `supabase/migrations/20260624200000_add_delivery_proof.sql` | `proof_image_url` column + `delivery-proofs` bucket |
+| Type update | `types/database.ts` | `proof_image_url: string \| null` di `DeliverySchedule` |
