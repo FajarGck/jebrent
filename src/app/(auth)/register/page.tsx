@@ -117,28 +117,6 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            {/* Role select */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Daftar sebagai</label>
-              <div className="grid grid-cols-2 gap-3">
-                {SELECTABLE_ROLES.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setRole(r.value)}
-                    className={`rounded-lg border-2 px-4 py-3 text-left text-sm transition-all ${
-                      role === r.value
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-border-hover"
-                    }`}
-                  >
-                    <p className="font-semibold">{r.label}</p>
-                    <p className="mt-0.5 text-xs text-muted">{r.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Name */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="full_name" className="text-sm font-medium">

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireDashboardAccess } from '@/lib/auth-server';
 import { getMyBookings } from '@/actions/bookings';
 import BookingCard from '@/components/bookings/booking-card';
+import RenterActiveRental from '@/components/bookings/renter-active-rental';
 
 export default async function RenterDashboardPage() {
   const { user, displayName } = await requireDashboardAccess('renter');
@@ -82,6 +83,9 @@ export default async function RenterDashboardPage() {
           <p className="mt-3 text-3xl font-bold">{completedBookings.length}</p>
         </div>
       </div>
+
+      {/* Active Rental & Denda Widget */}
+      <RenterActiveRental activeBookings={allBookings} />
 
       {/* Booking terbaru */}
       {recentBookings.length > 0 ? (

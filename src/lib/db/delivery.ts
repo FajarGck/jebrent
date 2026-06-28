@@ -111,13 +111,15 @@ export async function getDeliveriesByDriver(
  */
 export async function updateDeliveryStatus(
   id: string,
-  status: DeliveryStatus
+  status: DeliveryStatus,
+  proofImageUrl?: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
 
   const updates: Record<string, string> = { delivery_status: status };
-  if (status === "completed") {
+  if (status === "delivered") {
     updates.completed_at = new Date().toISOString();
+    if (proofImageUrl) updates.proof_image_url = proofImageUrl;
   }
 
   const { error } = await (supabase.from("delivery_schedules") as any)
@@ -126,4 +128,27 @@ export async function updateDeliveryStatus(
 
   if (error) return { error: error.message };
   return { error: null };
+}
+
+/**
+ * Ambil semua delivery schedule di sistem.
+ * Digunakan di dashboard admin.
+ */
+export async function getAllDeliveries(): Promise<DeliveryWithDetails[]> {
+  const supabase = await createClient();
+  const { data, error } = await (supabase
+    .from("delivery_schedules")
+    .select(`
+      *,
+      profiles ( id, full_name, phone, avatar_url ),
+      bookings (
+        *,
+        vehicles ( id, brand, model, plate_number ),
+        profiles ( id, full_name, phone )
+      )
+    `)
+    .order("departure_time", { ascending: false }) as any);
+
+  if (error || !data) return [];
+  return data as DeliveryWithDetails[];
 }

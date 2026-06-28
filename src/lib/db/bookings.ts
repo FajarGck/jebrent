@@ -65,6 +65,7 @@ export async function getBookingById(
       ),
       profiles ( id, full_name, phone, avatar_url ),
       payments (*),
+      reviews (*),
       delivery_schedules (
         *,
         profiles ( id, full_name, phone )

@@ -12,6 +12,7 @@ import type { PaymentMethod } from "@/types/database";
 type PaymentFormProps = {
   bookingId: string;
   totalPrice: number;
+  paymentType?: 'dp' | 'final' | 'fine';
 };
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
@@ -20,7 +21,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "cash", label: "Tunai" },
 ];
 
-export default function PaymentForm({ bookingId, totalPrice }: PaymentFormProps) {
+export default function PaymentForm({ bookingId, totalPrice, paymentType = 'dp' }: PaymentFormProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -64,6 +65,10 @@ export default function PaymentForm({ bookingId, totalPrice }: PaymentFormProps)
       formData.set("booking_id", bookingId);
       formData.set("payment_method", method);
       formData.set("proof_file", file);
+      formData.set("payment_type", paymentType);
+      if (paymentType === 'fine') {
+        formData.set("amount", totalPrice.toString());
+      }
 
       const result = await uploadPaymentProof(formData);
       if (result.error) {

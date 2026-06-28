@@ -179,11 +179,14 @@ export async function createBooking(
     end_date: input.endDate,
     duration_type: priceData.durationType,
     delivery_address: input.deliveryAddress,
+    delivery_latitude: input.deliveryLatitude,
+    delivery_longitude: input.deliveryLongitude,
+    usage_radius: input.usageRadius,
     status: "pending",
     deposit_amount: priceData.depositAmount,
     total_price: priceData.totalPrice,
     notes: input.notes,
-  });
+  } as any);
 
   if (insertError || !booking) {
     return { error: insertError ?? "Gagal membuat booking" };
@@ -191,6 +194,7 @@ export async function createBooking(
 
   revalidatePath("/bookings");
   revalidatePath("/dashboard/renter");
+  revalidatePath("/dashboard/admin");
 
   return { success: true, bookingId: booking.id };
 }
@@ -232,7 +236,7 @@ export async function cancelBooking(
     return { error: "Anda tidak memiliki izin untuk membatalkan booking ini" };
   }
 
-  const cancellableStatuses = ["pending", "confirmed"];
+  const cancellableStatuses = ["pending", "confirmed", "in_delivery"];
   if (!cancellableStatuses.includes(booking.status)) {
     return {
       error: `Booking dengan status "${booking.status}" tidak dapat dibatalkan`,
@@ -245,21 +249,15 @@ export async function cancelBooking(
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard/owner");
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/renter");
 
   return { success: true, bookingId };
 }
 
 // =============================================================
-// CONFIRM BOOKING  ← KRITIKAL (trigger Dev B bisa mulai payment)
+// CONFIRM BOOKING
 // =============================================================
-
-/**
- * Owner mengkonfirmasi booking.
- * Setelah confirmed, status booking berubah ke "confirmed"
- * → Dev B bisa trigger payment flow dari sini.
- *
- * Hanya bisa dilakukan oleh: owner kendaraan yang di-booking, atau admin.
- */
 
 export async function confirmBooking(bookingId: string): Promise<BookingActionResult> {
   const supabase = await createClient();
@@ -267,8 +265,7 @@ export async function confirmBooking(bookingId: string): Promise<BookingActionRe
 
   if (!user) return { error: "Unauthorized" };
 
-  // 1. Verifikasi Data & Izin (Logic yang sudah ada)
-  const booking = await getBookingById(bookingId); // Pastikan fungsi ini mereturn data + owner_id
+  const booking = await getBookingById(bookingId);
 
   if (!booking) return { error: "Booking tidak ditemukan" };
   if (booking.status !== "pending") {
@@ -276,35 +273,41 @@ export async function confirmBooking(bookingId: string): Promise<BookingActionRe
   }
 
   const role = await resolveUserRole(supabase, user);
-  const isVehicleOwner = booking.vehicles != null && booking.vehicles.owner_id === user.id;
-  const isAdmin = role === "admin";
-
-  if (!isVehicleOwner && !isAdmin) {
-    return { error: "Hanya pemilik kendaraan atau admin yang dapat mengkonfirmasi" };
+  if (role !== "admin") {
+    return { error: "Hanya admin yang dapat mengkonfirmasi booking" };
   }
 
   if (!booking.vehicle_id) {
     return { error: "Data kendaraan pada booking tidak ditemukan" };
   }
 
-  // 2. Gunakan fungsi baru yang melibatkan RPC (update booking & vehicle sekaligus)
   try {
     await updateBookingAndVehicleStatus(
       bookingId,
       booking.vehicle_id,
-      "confirmed",
+      "in_delivery",
       "rented"
     );
+
+    // Buat jadwal pengantaran otomatis jam 7 pagi di start_date
+    const deliveryTime = new Date(booking.start_date);
+    deliveryTime.setHours(7, 0, 0, 0);
+
+    await (supabase.from('delivery_schedules') as any).insert({
+      booking_id: booking.id,
+      departure_time: deliveryTime.toISOString(),
+      delivery_status: 'assigned',
+      notes: 'Jadwal otomatis dibuat sistem pada pukul 07:00 WIB',
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { error: `Gagal mengonfirmasi booking: ${message}` };
   }
 
-  // 3. Revalidate path agar UI sinkron
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard/owner");
-  revalidatePath("/dashboard/admin"); // Tambahkan path admin jika perlu
+  revalidatePath("/dashboard/admin");
 
   return { success: true, bookingId };
 }
@@ -313,11 +316,6 @@ export async function confirmBooking(bookingId: string): Promise<BookingActionRe
 // COMPLETE BOOKING
 // =============================================================
 
-/**
- * Menandai booking sebagai selesai.
- * Dipanggil oleh owner atau admin setelah kendaraan kembali.
- * Setelah completed, Dev B bisa trigger review flow.
- */
 export async function completeBooking(
   bookingId: string
 ): Promise<BookingActionResult> {
@@ -330,37 +328,87 @@ export async function completeBooking(
 
   const { data: bookingData } = await supabase
     .from("bookings")
-    .select("status, vehicles(owner_id)")
+    .select("status, vehicle_id")
     .eq("id", bookingId)
     .single();
 
   const booking = bookingData as {
     status: string;
-    vehicles: { owner_id: string } | null;
+    vehicle_id: string;
   } | null;
 
   if (!booking) return { error: "Booking tidak ditemukan" };
 
-  const completableStatuses = ["active", "returning", "paid"];
+  const completableStatuses = ["active", "returning"];
   if (!completableStatuses.includes(booking.status)) {
     return { error: `Booking dengan status "${booking.status}" belum bisa diselesaikan` };
   }
 
   const role = await resolveUserRole(supabase, user);
-  const isVehicleOwner = booking.vehicles?.owner_id === user.id;
-  const isAdmin = role === "admin";
-
-  if (!isVehicleOwner && !isAdmin) {
-    return { error: "Hanya pemilik kendaraan atau admin yang dapat menyelesaikan booking" };
+  if (role !== "admin") {
+    return { error: "Hanya admin yang dapat menyelesaikan booking" };
   }
 
-  const { error } = await updateBookingStatus(bookingId, "completed");
+  // Atomic: booking → completed + vehicle → available
+  try {
+    await updateBookingAndVehicleStatus(
+      bookingId,
+      booking.vehicle_id,
+      "completed",
+      "available"
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: `Gagal menyelesaikan booking: ${message}` };
+  }
+
+  revalidatePath("/bookings");
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath("/dashboard/owner");
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/renter");
+  revalidatePath("/vehicles");
+
+  return { success: true, bookingId };
+}
+
+// =============================================================
+// RETURN VEHICLE — Penyewa mengembalikan kendaraan
+// =============================================================
+
+export async function returnVehicle(
+  bookingId: string
+): Promise<BookingActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Unauthorized" };
+
+  const { data: bookingData } = await supabase
+    .from("bookings")
+    .select("renter_id, status")
+    .eq("id", bookingId)
+    .single();
+
+  const booking = bookingData as { renter_id: string; status: string } | null;
+  if (!booking) return { error: "Booking tidak ditemukan" };
+
+  if (booking.renter_id !== user.id) {
+    return { error: "Hanya penyewa yang dapat mengembalikan kendaraan" };
+  }
+
+  if (booking.status !== "active") {
+    return { error: "Kendaraan hanya bisa dikembalikan saat status sedang digunakan" };
+  }
+
+  const { error } = await updateBookingStatus(bookingId, "returning");
   if (error) return { error };
 
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard/owner");
-  revalidatePath("/dashboard/renter");
 
   return { success: true, bookingId };
 }

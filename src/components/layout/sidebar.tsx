@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { UserRole } from '@/types/database';
-import { LayoutDashboard, Car, CalendarCheck, Users, CreditCard, Star, Truck, Package, Menu, X, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Car, CalendarCheck, Users, CreditCard, Star, ShieldAlert, Menu, X, User, Truck, type LucideIcon } from 'lucide-react';
 
 type NavItem = {
   href: string;
@@ -19,24 +19,28 @@ const SIDEBAR_NAV: Record<string, NavItem[]> = {
     { href: '/dashboard/admin/vehicles', label: 'Kendaraan', icon: Car },
     { href: '/dashboard/admin/bookings', label: 'Pemesanan', icon: CalendarCheck },
     { href: '/dashboard/admin/payments', label: 'Pembayaran', icon: CreditCard },
-    { href: '/dashboard/admin/deliveries', label: 'Pengantaran', icon: Truck },
-    { href: '/dashboard/admin/addons', label: 'Layanan', icon: Package },
+    { href: '/dashboard/admin/fines', label: 'Denda', icon: ShieldAlert },
+    { href: '/dashboard/admin/deliveries', label: 'Jadwal Pengantaran', icon: Truck },
+    { href: '/dashboard/profile', label: 'Profil Saya', icon: User },
   ],
   owner: [
     { href: '/dashboard/owner', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/owner/vehicles', label: 'Kendaraan Saya', icon: Car },
     { href: '/dashboard/owner/bookings', label: 'Pesanan Masuk', icon: CalendarCheck },
-    { href: '/dashboard/owner/payments', label: 'Pembayaran', icon: CreditCard },
     { href: '/dashboard/owner/reviews', label: 'Ulasan', icon: Star },
+    { href: '/dashboard/profile', label: 'Profil Saya', icon: User },
   ],
   renter: [
     { href: '/dashboard/renter', label: 'Overview', icon: LayoutDashboard },
-    { href: '/vehicles', label: 'Kendaraan Tersedia', icon: Car },
+    { href: '/dashboard/renter/vehicles', label: 'Kendaraan Tersedia', icon: Car },
     { href: '/dashboard/renter/bookings', label: 'Riwayat Booking', icon: CalendarCheck },
+    { href: '/dashboard/renter/payments', label: 'Riwayat Pembayaran', icon: CreditCard },
+    { href: '/dashboard/profile', label: 'Profil Saya', icon: User },
   ],
   driver: [
     { href: '/dashboard/driver', label: 'Overview', icon: LayoutDashboard },
-    { href: '/dashboard/driver/deliveries', label: 'Pengantaran', icon: Truck },
+    { href: '/dashboard/driver/deliveries', label: 'Semua Pengantaran', icon: Truck },
+    { href: '/dashboard/profile', label: 'Profil Saya', icon: User },
   ],
 };
 

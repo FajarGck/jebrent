@@ -1,8 +1,12 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { LayoutDashboard, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { LayoutDashboard, Users, Car, CalendarCheck, CreditCard } from 'lucide-react';
 import type { Profile } from '@/types/database';
+import AdminGPSMonitor from '@/components/dashboard/admin-gps-monitor';
+
+function formatCurrency(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
+}
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -13,9 +17,41 @@ export default async function AdminDashboardPage() {
   const profile = data as Profile | null;
   if (!profile || profile.role !== 'admin') redirect('/dashboard');
 
+  const activeStatuses = ['pending', 'confirmed', 'paid', 'in_delivery', 'active', 'returning'];
+
+  // Fetch metrics data
+  const [usersRes, vehiclesRes, bookingsRes, revenueRes] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('vehicles').select('*', { count: 'exact', head: true }),
+    (supabase.from('bookings').select('*', { count: 'exact', head: true }) as any).in('status', activeStatuses),
+    (supabase.from('payments').select('amount') as any).eq('status', 'confirmed'),
+  ]);
+
+  const totalRevenue = (revenueRes.data as { amount: number }[] ?? []).reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
+
+  // Fetch active bookings for GPS simulation
+  const { data: activeBookings } = await (supabase
+    .from('bookings')
+    .select('*, vehicles(brand, model, plate_number)') as any)
+    .in('status', ['in_delivery', 'active']);
+
+  // Fetch delivery schedules for recap
+  const { data: deliverySchedules } = await (supabase
+    .from('delivery_schedules')
+    .select('*, bookings(*, vehicles(brand, model, plate_number))') as any)
+    .order('departure_time', { ascending: true });
+
+  const stats = [
+    { label: 'Total Pengguna', value: String(usersRes.count ?? 0), icon: Users },
+    { label: 'Total Kendaraan', value: String(vehiclesRes.count ?? 0), icon: Car },
+    { label: 'Pemesanan Aktif', value: String(bookingsRes.count ?? 0), icon: CalendarCheck },
+    { label: 'Pendapatan', value: formatCurrency(totalRevenue), icon: CreditCard },
+  ];
+
   return (
-    <>
-      <div className="mb-8">
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
             <LayoutDashboard className="h-6 w-6" />
@@ -27,29 +63,24 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: 'Total Pengguna', value: '—' },
-          { label: 'Total Kendaraan', value: '—' },
-          { label: 'Pemesanan Aktif', value: '—' },
-          { label: 'Pendapatan', value: '—' },
-        ].map((stat) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <p className="text-sm text-muted">{stat.label}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted">{stat.label}</p>
+              <stat.icon className="h-5 w-5 text-muted" />
+            </div>
             <p className="mt-2 text-3xl font-bold">{stat.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8">
-        <Link
-          href="/dashboard/owner"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-xl"
-        >
-          Dashboard Owner
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </>
+      {/* GPS Monitoring & Delivery Recap Component */}
+      <AdminGPSMonitor
+        activeBookings={activeBookings ?? []}
+        deliverySchedules={deliverySchedules ?? []}
+      />
+    </div>
   );
 }

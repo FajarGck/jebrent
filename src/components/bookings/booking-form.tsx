@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createBooking, calculatePriceBreakdown } from '@/actions/bookings';
 import { formatCurrency, calculateRentalDays } from '@/lib/utils';
 import { DEPOSIT_PERCENTAGE } from '@/lib/constants';
+import MapPicker from './map-picker';
 import {
   Calendar,
   MapPin,
@@ -123,6 +124,9 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
+  const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
+  const [usageRadius, setUsageRadius] = useState<number>(15);
   const [notes, setNotes] = useState('');
   const [withDelivery, setWithDelivery] = useState(true);
 
@@ -194,6 +198,9 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
         endDate,
         durationType: breakdown?.durationType ?? 'daily',
         deliveryAddress: withDelivery ? deliveryAddress.trim() : null,
+        deliveryLatitude: withDelivery ? deliveryLat : null,
+        deliveryLongitude: withDelivery ? deliveryLng : null,
+        usageRadius: withDelivery ? usageRadius : null,
         notes: notes.trim() || null,
       });
 
@@ -340,23 +347,14 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
             </div>
 
             {withDelivery && (
-              <div>
-                <label htmlFor="delivery_address" className="mb-1.5 block text-sm font-medium">
-                  Alamat Pengantaran <span className="text-danger">*</span>
-                </label>
-                <textarea
-                  id="delivery_address"
-                  rows={3}
-                  required={withDelivery}
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  placeholder="Contoh: Jl. Merdeka No. 10, Kel. Kebon Jeruk, Jakarta Barat"
-                  className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm transition-colors focus:border-primary focus:outline-none"
-                />
-                <p className="mt-1.5 text-xs text-muted">
-                  Tulis alamat lengkap termasuk nama kelurahan dan kota
-                </p>
-              </div>
+              <MapPicker
+                onLocationChange={(data) => {
+                  setDeliveryAddress(data.address);
+                  setDeliveryLat(data.lat);
+                  setDeliveryLng(data.lng);
+                  setUsageRadius(data.radius);
+                }}
+              />
             )}
           </div>
 

@@ -3,16 +3,7 @@ import { getOwnerBookings } from '@/actions/bookings';
 import { BookingStatusBadge } from '@/components/bookings/booking-status';
 import OwnerBookingAction from '@/components/bookings/owner-booking-action';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import {
-  CalendarCheck,
-  Car,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  ChevronRight,
-  ArrowLeft,
-} from 'lucide-react';
+import { CalendarCheck, Car, Clock, CheckCircle2, XCircle, AlertCircle, ChevronRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { BookingStatus, BookingWithVehicle } from '@/types/database';
@@ -31,20 +22,7 @@ const STATUS_FILTERS: { label: string; value: BookingStatus | 'all' }[] = [
   { label: 'Dibatalkan', value: 'cancelled' },
 ];
 
-// ==============================================================
-// Summary Card
-// ==============================================================
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  colorClass,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number;
-  colorClass: string;
-}) {
+function SummaryCard({ icon: Icon, label, value, colorClass }: { icon: React.ElementType; label: string; value: number; colorClass: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center gap-3">
@@ -58,36 +36,20 @@ function SummaryCard({
   );
 }
 
-// ==============================================================
-// Booking Row
-// ==============================================================
 function BookingRow({ booking }: { booking: BookingWithVehicle }) {
   const vehicle = booking.vehicles;
-  const primaryImage =
-    vehicle?.vehicle_images?.find((img) => img.is_primary) ??
-    vehicle?.vehicle_images?.[0];
+  const primaryImage = vehicle?.vehicle_images?.find((img) => img.is_primary) ?? vehicle?.vehicle_images?.[0];
 
-  const days = Math.max(
-    1,
-    Math.ceil(
-      (new Date(booking.end_date).getTime() -
-        new Date(booking.start_date).getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  );
+  const days = Math.max(1, Math.ceil((new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) / (1000 * 60 * 60 * 24)));
 
   const renter = booking.profiles;
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center">
       {/* Thumbnail */}
-      <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded-xl">
+      <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl">
         {primaryImage ? (
-          <img
-            src={primaryImage.image_url}
-            alt={`${vehicle.brand} ${vehicle.model}`}
-            className="h-full w-full object-cover"
-          />
+          <img src={primaryImage.image_url} alt={`${vehicle.brand} ${vehicle.model}`} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-card-muted">
             <Car className="h-6 w-6 text-subtle" />
@@ -114,9 +76,7 @@ function BookingRow({ booking }: { booking: BookingWithVehicle }) {
         </p>
         <p className="text-xs text-muted">
           {formatDate(booking.start_date)} — {formatDate(booking.end_date)}
-          <span className="ml-1.5 rounded-full bg-card-muted px-2 py-0.5">
-            {days} hari
-          </span>
+          <span className="ml-1.5 rounded-full bg-card-muted px-2 py-0.5">{days} hari</span>
         </p>
       </div>
 
@@ -129,10 +89,7 @@ function BookingRow({ booking }: { booking: BookingWithVehicle }) {
       {/* Actions */}
       <div className="flex shrink-0 flex-col items-end gap-2">
         <OwnerBookingAction bookingId={booking.id} status={booking.status} />
-        <Link
-          href={`/bookings/${booking.id}`}
-          className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary"
-        >
+        <Link href={`/bookings/${booking.id}`} className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-primary">
           Lihat detail
           <ChevronRight className="h-3 w-3" />
         </Link>
@@ -144,11 +101,7 @@ function BookingRow({ booking }: { booking: BookingWithVehicle }) {
 // ==============================================================
 // Page
 // ==============================================================
-export default async function OwnerBookingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>;
-}) {
+export default async function OwnerBookingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   await requireDashboardAccess('owner');
   const { status: statusParam } = await searchParams;
   const activeFilter = (statusParam ?? 'all') as BookingStatus | 'all';
@@ -157,16 +110,11 @@ export default async function OwnerBookingsPage({
   const allBookings = await getOwnerBookings();
 
   // Filter lokal
-  const filtered =
-    activeFilter === 'all'
-      ? allBookings
-      : allBookings.filter((b) => b.status === activeFilter);
+  const filtered = activeFilter === 'all' ? allBookings : allBookings.filter((b) => b.status === activeFilter);
 
   // Stats
   const pendingCount = allBookings.filter((b) => b.status === 'pending').length;
-  const confirmedCount = allBookings.filter((b) =>
-    ['confirmed', 'paid', 'in_delivery', 'active'].includes(b.status)
-  ).length;
+  const confirmedCount = allBookings.filter((b) => ['confirmed', 'paid', 'in_delivery', 'active'].includes(b.status)).length;
   const completedCount = allBookings.filter((b) => b.status === 'completed').length;
   const cancelledCount = allBookings.filter((b) => b.status === 'cancelled').length;
 
@@ -174,17 +122,12 @@ export default async function OwnerBookingsPage({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Link
-          href="/dashboard/owner"
-          className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-primary"
-        >
+        <Link href="/dashboard/owner" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-primary">
           <ArrowLeft className="h-4 w-4" />
           Kembali ke Dashboard
         </Link>
         <h1 className="text-2xl font-bold">Pesanan Masuk</h1>
-        <p className="mt-1 text-sm text-muted">
-          Kelola booking untuk semua kendaraan Anda
-        </p>
+        <p className="mt-1 text-sm text-muted">Kelola booking untuk semua kendaraan Anda</p>
       </div>
 
       {/* Alert: ada pending */}
@@ -192,76 +135,37 @@ export default async function OwnerBookingsPage({
         <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-warning mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-warning">
-              {pendingCount} Booking Menunggu Konfirmasi Anda
-            </p>
-            <p className="mt-0.5 text-xs text-muted">
-              Konfirmasi atau tolak booking agar penyewa bisa melanjutkan pembayaran.
-            </p>
+            <p className="text-sm font-semibold text-warning">{pendingCount} Booking Menunggu Konfirmasi Anda</p>
+            <p className="mt-0.5 text-xs text-muted">Konfirmasi atau tolak booking agar penyewa bisa melanjutkan pembayaran.</p>
           </div>
         </div>
       )}
 
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <SummaryCard
-          icon={Clock}
-          label="Menunggu"
-          value={pendingCount}
-          colorClass="text-warning"
-        />
-        <SummaryCard
-          icon={CheckCircle2}
-          label="Aktif"
-          value={confirmedCount}
-          colorClass="text-primary"
-        />
-        <SummaryCard
-          icon={CalendarCheck}
-          label="Selesai"
-          value={completedCount}
-          colorClass="text-success"
-        />
-        <SummaryCard
-          icon={XCircle}
-          label="Dibatalkan"
-          value={cancelledCount}
-          colorClass="text-danger"
-        />
+        <SummaryCard icon={Clock} label="Menunggu" value={pendingCount} colorClass="text-warning" />
+        <SummaryCard icon={CheckCircle2} label="Aktif" value={confirmedCount} colorClass="text-primary" />
+        <SummaryCard icon={CalendarCheck} label="Selesai" value={completedCount} colorClass="text-success" />
+        <SummaryCard icon={XCircle} label="Dibatalkan" value={cancelledCount} colorClass="text-danger" />
       </div>
 
       {/* Filter Tabs */}
       {allBookings.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {STATUS_FILTERS.map(({ label, value }) => {
-            const count =
-              value === 'all'
-                ? allBookings.length
-                : allBookings.filter((b) => b.status === value).length;
+            const count = value === 'all' ? allBookings.length : allBookings.filter((b) => b.status === value).length;
             if (value !== 'all' && count === 0) return null;
 
             return (
               <Link
                 key={value}
-                href={
-                  value === 'all'
-                    ? '/dashboard/owner/bookings'
-                    : `/dashboard/owner/bookings?status=${value}`
-                }
+                href={value === 'all' ? '/dashboard/owner/bookings' : `/dashboard/owner/bookings?status=${value}`}
                 className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activeFilter === value
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-card text-muted hover:border-border-hover hover:text-foreground'
+                  activeFilter === value ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted hover:border-border-hover hover:text-foreground'
                 }`}
               >
                 {label}
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-xs ${
-                    activeFilter === value ? 'bg-primary/20' : 'bg-card-muted'
-                  }`}
-                >
-                  {count}
-                </span>
+                <span className={`rounded-full px-1.5 py-0.5 text-xs ${activeFilter === value ? 'bg-primary/20' : 'bg-card-muted'}`}>{count}</span>
               </Link>
             );
           })}
@@ -272,14 +176,8 @@ export default async function OwnerBookingsPage({
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-12 text-center">
           <CalendarCheck className="mx-auto h-12 w-12 text-subtle" />
-          <h2 className="mt-4 text-lg font-semibold">
-            {activeFilter === 'all' ? 'Belum Ada Pesanan' : 'Tidak Ada Pesanan dengan Status Ini'}
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            {activeFilter === 'all'
-              ? 'Pesanan akan muncul di sini setelah ada penyewa yang booking kendaraan Anda.'
-              : 'Coba filter status yang lain.'}
-          </p>
+          <h2 className="mt-4 text-lg font-semibold">{activeFilter === 'all' ? 'Belum Ada Pesanan' : 'Tidak Ada Pesanan dengan Status Ini'}</h2>
+          <p className="mt-2 text-sm text-muted">{activeFilter === 'all' ? 'Pesanan akan muncul di sini setelah ada penyewa yang booking kendaraan Anda.' : 'Coba filter status yang lain.'}</p>
         </div>
       ) : (
         <div className="space-y-3">

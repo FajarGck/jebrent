@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { deleteVehicleAction } from '@/actions/vehicles';
 import { formatCurrency } from '@/lib/utils';
 import { VEHICLE_TYPE_LABELS, VEHICLE_STATUS_LABELS } from '@/lib/constants';
-import { Car, Pencil, Trash2, Loader2, X } from 'lucide-react';
+import { Car, Pencil, Trash2, Loader2 } from 'lucide-react';
 import type { VehicleWithImages } from '@/lib/db/vehicles';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -16,10 +16,13 @@ const STATUS_COLORS: Record<string, string> = {
   inactive: 'bg-card-muted text-subtle',
 };
 
-export default function OwnerVehicleTable({ vehicles }: { vehicles: VehicleWithImages[] }) {
+export default function OwnerVehicleTable({ vehicles, readOnly = false }: { vehicles: VehicleWithImages[]; readOnly?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const pathPrefix = pathname.startsWith('/dashboard/admin') ? '/dashboard/admin' : '/dashboard/owner';
 
   async function handleDelete(vehicleId: string) {
     setDeleting(vehicleId);
@@ -37,13 +40,15 @@ export default function OwnerVehicleTable({ vehicles }: { vehicles: VehicleWithI
       <div className="rounded-2xl border border-border bg-card p-12 text-center">
         <Car className="mx-auto h-12 w-12 text-subtle" />
         <h3 className="mt-4 text-lg font-semibold">Belum Ada Kendaraan</h3>
-        <p className="mt-2 text-sm text-muted">Mulai tambahkan kendaraan Anda untuk disewakan.</p>
-        <Link
-          href="/dashboard/owner/vehicles/new"
-          className="mt-4 inline-flex rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover"
-        >
-          Tambah Kendaraan
-        </Link>
+        <p className="mt-2 text-sm text-muted">Tidak ada kendaraan terdaftar saat ini.</p>
+        {!readOnly && (
+          <Link
+            href={`${pathPrefix}/vehicles/new`}
+            className="mt-4 inline-flex rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover"
+          >
+            Tambah Kendaraan
+          </Link>
+        )}
       </div>
     );
   }
@@ -85,7 +90,7 @@ export default function OwnerVehicleTable({ vehicles }: { vehicles: VehicleWithI
               <th className="px-4 py-3 text-left font-medium text-muted">Tipe</th>
               <th className="px-4 py-3 text-left font-medium text-muted">Tarif/Hari</th>
               <th className="px-4 py-3 text-left font-medium text-muted">Status</th>
-              <th className="px-4 py-3 text-right font-medium text-muted">Aksi</th>
+              {!readOnly && <th className="px-4 py-3 text-right font-medium text-muted">Aksi</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -115,22 +120,24 @@ export default function OwnerVehicleTable({ vehicles }: { vehicles: VehicleWithI
                       {VEHICLE_STATUS_LABELS[v.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Link
-                        href={`/dashboard/owner/vehicles/${v.id}/edit`}
-                        className="rounded-lg p-2 text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                      <button
-                        onClick={() => setConfirmId(v.id)}
-                        className="rounded-lg p-2 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+                  {!readOnly && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`${pathPrefix}/vehicles/${v.id}/edit`}
+                          className="rounded-lg p-2 text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                        <button
+                          onClick={() => setConfirmId(v.id)}
+                          className="rounded-lg p-2 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -160,22 +167,24 @@ export default function OwnerVehicleTable({ vehicles }: { vehicles: VehicleWithI
                   </span>
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-1 border-t border-border px-4 py-2">
-                <Link
-                  href={`/dashboard/owner/vehicles/${v.id}/edit`}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-primary/10 hover:text-primary"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit
-                </Link>
-                <button
-                  onClick={() => setConfirmId(v.id)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-danger/10 hover:text-danger"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Hapus
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="flex items-center justify-end gap-1 border-t border-border px-4 py-2">
+                  <Link
+                    href={`${pathPrefix}/vehicles/${v.id}/edit`}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => setConfirmId(v.id)}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Hapus
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

@@ -6,6 +6,7 @@ import { MAX_VEHICLE_IMAGES, MAX_VEHICLE_IMAGES_SIZE, VEHICLE_IMAGES_TYPE } from
 import type { VehicleType, Vehicle } from '@/types/database';
 import { requireVehicleManager } from '@/lib/auth-server';
 import { validateVehicleImages } from '@/lib/helper/vehicle-images-validator';
+import { resolveUserRole } from '@/lib/auth';
 
 export type VehicleActionResult = {
   error?: string;
@@ -44,9 +45,16 @@ export async function createVehicle(formData: FormData): Promise<VehicleActionRe
 
   if (!plate || !brand || !model || !type || !year || !color || !halfDayRate || !dailyRate) return { error: 'Semua field wajib harus diisi' };
 
+  const role = await resolveUserRole(supabase, user);
+  let ownerId = user.id;
+  if (role === 'admin') {
+    const selectedOwner = formData.get('owner_id') as string;
+    if (selectedOwner) ownerId = selectedOwner;
+  }
+
   const { data: vehicleData, error: vehicleErr } = await (supabase.from('vehicles') as any)
     .insert({
-      owner_id: user.id,
+      owner_id: ownerId,
       plate_number: plate.toUpperCase(),
       brand,
       model,
@@ -120,9 +128,10 @@ export async function updateVehicleAction(formData: FormData): Promise<VehicleAc
   const vehicleId = formData.get('vehicle_id') as string;
   if (!vehicleId) return { error: 'Vehicle ID missing' };
 
+  const role = await resolveUserRole(supabase, user);
   const { data: existingData } = await supabase.from('vehicles').select('owner_id').eq('id', vehicleId).single();
   const existing = existingData as { owner_id: string } | null;
-  if (!existing || existing.owner_id !== user.id) return { error: 'Unauthorized' };
+  if (!existing || (existing.owner_id !== user.id && role !== 'admin')) return { error: 'Unauthorized' };
 
   const updates: Record<string, string | number | null> = {};
   const fields = ['plate_number', 'brand', 'model', 'type', 'year', 'color', 'half_day_rate', 'daily_rate', 'weekly_rate', 'description', 'status', 'mileage'];
@@ -134,6 +143,11 @@ export async function updateVehicleAction(formData: FormData): Promise<VehicleAc
     else if (['half_day_rate', 'daily_rate', 'weekly_rate'].includes(field)) updates[field] = parseFloat(val as string);
     else if (field === 'plate_number') updates[field] = (val as string).toUpperCase();
     else updates[field] = val as string;
+  }
+
+  if (role === 'admin') {
+    const selectedOwner = formData.get('owner_id') as string;
+    if (selectedOwner) updates['owner_id'] = selectedOwner;
   }
 
   if (Object.keys(updates).length > 0) {
@@ -182,9 +196,10 @@ export async function deleteVehicleAction(vehicleId: string): Promise<VehicleAct
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Unauthorized' };
 
+  const role = await resolveUserRole(supabase, user);
   const { data: existingData } = await supabase.from('vehicles').select('owner_id').eq('id', vehicleId).single();
   const existing = existingData as { owner_id: string } | null;
-  if (!existing || existing.owner_id !== user.id) return { error: 'Unauthorized' };
+  if (!existing || (existing.owner_id !== user.id && role !== 'admin')) return { error: 'Unauthorized' };
 
   const { data: imagesData } = await supabase.from('vehicle_images').select('image_url').eq('vehicle_id', vehicleId);
   const images = (imagesData ?? []) as { image_url: string }[];

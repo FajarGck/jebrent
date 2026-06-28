@@ -43,13 +43,6 @@ export default async function OwnerVehiclesPage({
             <p className="text-sm text-muted">{vehicles.length} kendaraan terdaftar</p>
           </div>
         </div>
-        <Link
-          href="/dashboard/owner/vehicles/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-xl"
-        >
-          <Plus className="h-4 w-4" />
-          Tambah Kendaraan
-        </Link>
       </div>
 
       <div className="mb-6">
@@ -58,7 +51,7 @@ export default async function OwnerVehiclesPage({
         </Suspense>
       </div>
 
-      <OwnerVehicleTable vehicles={vehicles} />
+      <OwnerVehicleTable vehicles={vehicles} readOnly={true} />
     </>
   );
 }
