@@ -37,6 +37,7 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   unpaid: 'Belum Dibayar',
   pending_confirmation: 'Menunggu Konfirmasi',
   confirmed: 'Terkonfirmasi',
+  rejected: 'Ditolak',
   refunded: 'Dikembalikan',
 };
 

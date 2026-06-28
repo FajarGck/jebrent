@@ -39,6 +39,7 @@ export default function RenterActiveRental({ activeBookings }: RenterActiveRenta
       <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
         {targetBookings.map((b) => {
           const endDate = new Date(b.end_date);
+          endDate.setHours(12, 0, 0, 0);
           const now = new Date();
           const isLate = now > endDate;
 

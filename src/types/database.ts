@@ -29,6 +29,7 @@ export type PaymentStatus =
   | "unpaid"
   | "pending_confirmation"
   | "confirmed"
+  | "rejected"
   | "refunded";
 
 export type PaymentMethod = "bank_transfer" | "ewallet" | "cash";
