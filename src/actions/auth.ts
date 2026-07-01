@@ -6,6 +6,7 @@ import { getDashboardPath, isGenericDashboardPath, resolveUserRole } from '@/lib
 import { syncProfileFromAuth } from '@/lib/auth-server';
 import type { UserRole } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+import { translateError } from '@/lib/helper/error-translator';
 
 export type AuthResult = {
   error?: string;
@@ -38,7 +39,7 @@ export async function register(formData: FormData): Promise<AuthResult> {
     },
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
 
   return { success: true };
 }
@@ -59,8 +60,8 @@ export async function login(formData: FormData): Promise<AuthResult> {
     password,
   });
 
-  if (error) return { error: error.message };
-  if (!data.user) return { error: 'Login gagal, coba lagi' };
+  if (error) return { error: translateError(error.message) };
+  if (!data.user) return { error: 'Gagal masuk, silakan coba lagi' };
 
   await syncProfileFromAuth(supabase, data.user);
   const role = await resolveUserRole(supabase, data.user);
@@ -79,7 +80,7 @@ export async function logout() {
 export async function createUserByAdminAction(formData: FormData): Promise<AuthResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const role = await resolveUserRole(supabase, user);
   if (role !== 'admin') return { error: 'Hanya admin yang dapat mendaftarkan pengguna baru' };
@@ -104,14 +105,14 @@ export async function createUserByAdminAction(formData: FormData): Promise<AuthR
     p_role: targetRole,
   });
 
-  if (error) return { error: `Gagal mendaftarkan pengguna: ${error.message}` };
+  if (error) return { error: `Gagal mendaftarkan pengguna: ${translateError(error.message)}` };
 
   const phone = formData.get('phone') as string | null;
   if (phone && newUserId) {
     const { error: phoneErr } = await (supabase.from('profiles') as any)
       .update({ phone: phone })
       .eq('id', newUserId);
-    if (phoneErr) console.error("Gagal update phone untuk user baru:", phoneErr.message);
+    if (phoneErr) console.error("Gagal update phone untuk user baru:", translateError(phoneErr.message));
   }
 
   return { success: true };
@@ -120,7 +121,7 @@ export async function createUserByAdminAction(formData: FormData): Promise<AuthR
 export async function updateProfileAction(formData: FormData): Promise<AuthResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const fullName = formData.get('full_name') as string;
   const phone = formData.get('phone') as string | null;
@@ -138,7 +139,7 @@ export async function updateProfileAction(formData: FormData): Promise<AuthResul
     updated_at: new Date().toISOString(),
   };
 
-  // NIK is only for renter or other roles if they supply it
+  // NIK hanya untuk penyewa jika disediakan
   if (nik !== null) {
     updates.nik = nik || null;
     if (nik && nik.length !== 16) {
@@ -146,7 +147,7 @@ export async function updateProfileAction(formData: FormData): Promise<AuthResul
     }
   }
 
-  // Handle KTP file upload if role is renter
+  // Unggah file KTP jika penyewa
   const ktpFile = formData.get('ktp_file') as File | null;
   if (ktpFile && ktpFile.size > 0) {
     const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -167,7 +168,7 @@ export async function updateProfileAction(formData: FormData): Promise<AuthResul
       .upload(path, ktpFile, { contentType: ktpFile.type, upsert: true });
 
     if (uploadErr) {
-      return { error: `Gagal upload KTP: ${uploadErr.message}` };
+      return { error: `Gagal mengunggah KTP: ${translateError(uploadErr.message)}` };
     }
 
     const { data: urlData } = supabase.storage.from('ktp-documents').getPublicUrl(path);
@@ -181,10 +182,10 @@ export async function updateProfileAction(formData: FormData): Promise<AuthResul
     .eq('id', user.id);
 
   if (updateErr) {
-    return { error: `Gagal memperbarui profil: ${updateErr.message}` };
+    return { error: `Gagal memperbarui profil: ${translateError(updateErr.message)}` };
   }
 
-  // Sync auth user metadata
+  // Sinkronisasi metadata user
   await supabase.auth.updateUser({
     data: { full_name: fullName, phone }
   });
@@ -199,7 +200,7 @@ export async function verifyUserKtpAction(
 ): Promise<AuthResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const role = await resolveUserRole(supabase, user);
   if (role !== 'admin') return { error: 'Hanya admin yang dapat memverifikasi KTP' };
@@ -209,7 +210,7 @@ export async function verifyUserKtpAction(
     .eq('id', userId);
 
   if (error) {
-    return { error: `Gagal mengubah status verifikasi KTP: ${error.message}` };
+    return { error: `Gagal mengubah status verifikasi KTP: ${translateError(error.message)}` };
   }
 
   revalidatePath('/dashboard/admin/users');
@@ -223,7 +224,7 @@ export async function editUserByAdminAction(
 ): Promise<AuthResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const role = await resolveUserRole(supabase, user);
   if (role !== 'admin') return { error: 'Hanya admin yang dapat mengedit pengguna' };
@@ -238,7 +239,7 @@ export async function editUserByAdminAction(
     })
     .eq('id', userId);
 
-  if (error) return { error: `Gagal mengupdate profil: ${error.message}` };
+  if (error) return { error: `Gagal memperbarui profil: ${translateError(error.message)}` };
 
   revalidatePath('/dashboard/admin/users');
   return { success: true };
@@ -247,7 +248,7 @@ export async function editUserByAdminAction(
 export async function deleteUserByAdminAction(userId: string): Promise<AuthResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const role = await resolveUserRole(supabase, user);
   if (role !== 'admin') return { error: 'Hanya admin yang dapat menghapus pengguna' };
@@ -256,7 +257,7 @@ export async function deleteUserByAdminAction(userId: string): Promise<AuthResul
     p_user_id: userId
   });
 
-  if (error) return { error: `Gagal menghapus pengguna: ${error.message}` };
+  if (error) return { error: `Gagal menghapus pengguna: ${translateError(error.message)}` };
 
   revalidatePath('/dashboard/admin/users');
   return { success: true };

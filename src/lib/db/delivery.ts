@@ -1,11 +1,4 @@
-// =============================================================
-// src/lib/db/delivery.ts  [NEW FILE]
-// Data Access Layer: Delivery Schedules — Dev A ONLY
-// =============================================================
-// Aturan:
-//  - Hanya query Supabase. Tidak ada business logic.
-//  - Business logic → actions/delivery.ts
-// =============================================================
+"use server";
 
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -13,17 +6,8 @@ import type {
   DeliveryStatus,
   DeliveryWithDetails,
 } from "@/types/database";
+import { translateError } from "@/lib/helper/error-translator";
 
-// =============================================================
-// INSERT
-// =============================================================
-
-/**
- * Insert jadwal delivery baru.
- * Dipanggil oleh: actions/delivery.ts → assignDriver()
- *
- * @param data - semua field DeliverySchedule kecuali id dan created_at
- */
 export async function insertDeliverySchedule(
   data: Omit<DeliverySchedule, "id" | "created_at">
 ): Promise<{ data: DeliverySchedule | null; error: string | null }> {
@@ -34,20 +18,10 @@ export async function insertDeliverySchedule(
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) return { data: null, error: translateError(error.message) };
   return { data: result as DeliverySchedule, error: null };
 }
 
-// =============================================================
-// SELECT
-// =============================================================
-
-/**
- * Ambil delivery schedule untuk booking tertentu, dengan detail driver.
- * Digunakan di halaman detail booking.
- *
- * @param bookingId - UUID booking
- */
 export async function getDeliveryByBooking(
   bookingId: string
 ): Promise<DeliveryWithDetails | null> {
@@ -70,12 +44,6 @@ export async function getDeliveryByBooking(
   return data as DeliveryWithDetails;
 }
 
-/**
- * Ambil semua delivery schedule yang di-assign ke driver tertentu.
- * Digunakan di dashboard driver.
- *
- * @param driverId - UUID driver (auth user id)
- */
 export async function getDeliveriesByDriver(
   driverId: string
 ): Promise<DeliveryWithDetails[]> {
@@ -98,17 +66,6 @@ export async function getDeliveriesByDriver(
   return data as DeliveryWithDetails[];
 }
 
-// =============================================================
-// UPDATE
-// =============================================================
-
-/**
- * Update status delivery schedule.
- * Dipanggil oleh: actions/delivery.ts → updateDeliveryStatus()
- *
- * @param id - delivery schedule UUID
- * @param status - DeliveryStatus baru
- */
 export async function updateDeliveryStatus(
   id: string,
   status: DeliveryStatus,
@@ -126,14 +83,10 @@ export async function updateDeliveryStatus(
     .update(updates)
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
   return { error: null };
 }
 
-/**
- * Ambil semua delivery schedule di sistem.
- * Digunakan di dashboard admin.
- */
 export async function getAllDeliveries(): Promise<DeliveryWithDetails[]> {
   const supabase = await createClient();
   const { data, error } = await (supabase

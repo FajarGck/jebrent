@@ -19,17 +19,10 @@ import {
 import type { VehicleWithImages } from '@/lib/db/vehicles';
 import type { PriceBreakdown } from '@/types/booking';
 
-// =============================================================
-// Types
-// =============================================================
-
 type BookingFormProps = {
   vehicle: VehicleWithImages;
 };
 
-// =============================================================
-// Helper: tanggal minimum (hari ini)
-// =============================================================
 function todayString(): string {
   return new Date().toISOString().split('T')[0];
 }
@@ -40,9 +33,6 @@ function tomorrowString(): string {
   return d.toISOString().split('T')[0];
 }
 
-// =============================================================
-// Sub-component: Price Summary Card
-// =============================================================
 function PriceSummary({
   breakdown,
   loading,
@@ -113,14 +103,10 @@ function PriceSummary({
   );
 }
 
-// =============================================================
-// Main Component
-// =============================================================
 export default function BookingForm({ vehicle }: BookingFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // Form state
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -130,17 +116,12 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
   const [notes, setNotes] = useState('');
   const [withDelivery, setWithDelivery] = useState(true);
 
-  // UI state
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Price breakdown state
   const [breakdown, setBreakdown] = useState<PriceBreakdown | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
 
-  // =============================================================
-  // Real-time price calculation
-  // =============================================================
   useEffect(() => {
     if (!startDate || !endDate) {
       setBreakdown(null);
@@ -159,15 +140,13 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
       const result = await calculatePriceBreakdown(vehicle.id, startDate, endDate);
       if (result.data) setBreakdown(result.data);
       setPriceLoading(false);
-    }, 300); // debounce 300ms
+    }, 300);
 
     return () => clearTimeout(timeout);
   }, [startDate, endDate, vehicle.id]);
 
-  // Auto-set endDate saat startDate berubah
   function handleStartDateChange(val: string) {
     setStartDate(val);
-    // Jika endDate sudah diisi dan <= startDate baru, reset endDate
     if (endDate && endDate <= val) {
       const next = new Date(val);
       next.setDate(next.getDate() + 1);
@@ -175,9 +154,6 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
     }
   }
 
-  // =============================================================
-  // Form Submit
-  // =============================================================
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -210,25 +186,21 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
       }
 
       setSuccess(true);
-      // Redirect ke halaman detail booking setelah 1.5 detik
       setTimeout(() => {
         router.push(`/bookings/${result.bookingId}`);
       }, 1500);
     });
   }
 
-  // =============================================================
-  // Success State
-  // =============================================================
   if (success) {
     return (
       <div className="rounded-2xl border border-success/30 bg-success/5 p-10 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
           <CheckCircle2 className="h-8 w-8 text-success" />
         </div>
-        <h2 className="mt-4 text-xl font-bold">Booking Berhasil Dibuat!</h2>
+        <h2 className="mt-4 text-xl font-bold">Pemesanan Berhasil Dibuat!</h2>
         <p className="mt-2 text-sm text-muted">
-          Menunggu konfirmasi dari pemilik kendaraan. Anda akan diarahkan ke halaman detail booking...
+          Menunggu konfirmasi dari pemilik kendaraan. Anda akan diarahkan ke halaman detail pemesanan...
         </p>
         <div className="mt-4 flex justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -237,9 +209,6 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
     );
   }
 
-  // =============================================================
-  // Form Render
-  // =============================================================
   const days = startDate && endDate ? calculateRentalDays(startDate, endDate) : 0;
   const endDateMin = startDate
     ? (() => {
@@ -251,7 +220,6 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Error Banner */}
       {error && (
         <div className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -260,10 +228,7 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* ======== LEFT: Form Fields ======== */}
         <div className="space-y-5">
-
-          {/* Tanggal Sewa */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-1.5">
@@ -315,7 +280,6 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
             )}
           </div>
 
-          {/* Layanan Pengantaran */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-1.5">
@@ -324,7 +288,6 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
               <h2 className="font-semibold">Layanan Pengantaran</h2>
             </div>
 
-            {/* Toggle delivery */}
             <div className="mb-4 flex items-center gap-3">
               <button
                 type="button"
@@ -358,7 +321,6 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
             )}
           </div>
 
-          {/* Catatan */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-1.5">
@@ -378,11 +340,9 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
           </div>
         </div>
 
-        {/* ======== RIGHT: Price Summary ======== */}
         <div className="space-y-4">
           <PriceSummary breakdown={breakdown} loading={priceLoading} />
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isPending || !startDate || !endDate || (withDelivery && !deliveryAddress.trim())}
@@ -395,17 +355,16 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
               </>
             ) : (
               <>
-                Buat Booking
+                Buat Pemesanan
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
           </button>
 
-          {/* Info */}
           <div className="rounded-xl bg-card-muted p-4 text-xs text-muted space-y-1.5">
             <p className="flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-              Booking akan menunggu konfirmasi pemilik
+              Pemesanan akan menunggu konfirmasi pemilik
             </p>
             <p className="flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
@@ -413,7 +372,7 @@ export default function BookingForm({ vehicle }: BookingFormProps) {
             </p>
             <p className="flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-              Bisa dibatalkan selama masih status pending
+              Bisa dibatalkan selama status masih pending
             </p>
           </div>
         </div>

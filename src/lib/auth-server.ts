@@ -5,10 +5,10 @@ import type { Profile, UserRole } from '@/types/database';
 import type { User } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
+import { translateError } from '@/lib/helper/error-translator';
 
 type SyncResult = { ok: true } | { ok: false; error: string };
 
-/** Keep profiles.role in sync with registration metadata so RLS (get_user_role) matches the app. */
 export async function syncProfileFromAuth(
   supabase: SupabaseClient<Database>,
   user: User,
@@ -23,7 +23,7 @@ export async function syncProfileFromAuth(
     .single<{ role: UserRole; full_name: string }>();
 
   if (fetchError && fetchError.code !== 'PGRST116') {
-    return { ok: false, error: fetchError.message };
+    return { ok: false, error: translateError(fetchError.message) };
   }
 
   const fullName = getDisplayName(user, profile ?? null);
@@ -40,14 +40,14 @@ export async function syncProfileFromAuth(
       is_available: true,
     };
     const { error: insertError } = await (supabase.from('profiles') as any).insert(newProfile);
-    if (insertError) return { ok: false, error: insertError.message };
+    if (insertError) return { ok: false, error: translateError(insertError.message) };
     return { ok: true };
   }
 
   if (profile.role === 'renter' && metadataRole === 'owner') {
     const roleUpdate: Database['public']['Tables']['profiles']['Update'] = { role: 'owner' };
     const { error: updateError } = await (supabase.from('profiles') as any).update(roleUpdate).eq('id', user.id);
-    if (updateError) return { ok: false, error: updateError.message };
+    if (updateError) return { ok: false, error: translateError(updateError.message) };
   }
 
   return { ok: true };
@@ -55,14 +55,12 @@ export async function syncProfileFromAuth(
 
 export async function requireVehicleManager(): Promise<User> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Sesi Anda telah berakhir. Silakan masuk kembali.');
 
   const sync = await syncProfileFromAuth(supabase, user);
   if (!sync.ok) {
-    throw new Error(`Gagal sinkronisasi profil: ${sync.error}`);
+    throw new Error(`Gagal sinkronisasi profil: ${translateError(sync.error)}`);
   }
 
   const role = await resolveUserRole(supabase, user);
@@ -89,11 +87,9 @@ export async function requireDashboardAccess(allowedRole: UserRole): Promise<{
   profile: Profile | null;
   role: UserRole;
   displayName: string;
-}> {
+ }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   await syncProfileFromAuth(supabase, user);

@@ -1,12 +1,3 @@
-// =============================================================
-// src/types/booking.ts
-// Extended Booking & Delivery Types — Dev A ONLY
-// =============================================================
-// File ini berisi type TAMBAHAN di atas yang sudah ada di database.ts.
-// - JANGAN duplikasi type yang sudah ada di database.ts
-// - Import dari sini untuk form, filter, dan UI-specific types
-// =============================================================
-
 import type {
   Booking,
   BookingStatus,
@@ -19,7 +10,6 @@ import type {
   Vehicle,
 } from "@/types/database";
 
-// Re-export supaya consumer tidak perlu import dari 2 file
 export type {
   Booking,
   BookingStatus,
@@ -31,15 +21,10 @@ export type {
   RentalDuration,
 };
 
-// =============================================================
-// Form Input Types
-// =============================================================
-
-/** Input dari booking-form.tsx sebelum dikirim ke createBooking() */
 export type CreateBookingInput = {
   vehicleId: string;
-  startDate: string;       // format: "YYYY-MM-DD"
-  endDate: string;         // format: "YYYY-MM-DD"
+  startDate: string;
+  endDate: string;
   durationType: RentalDuration;
   deliveryAddress: string | null;
   deliveryLatitude?: number | null;
@@ -48,36 +33,28 @@ export type CreateBookingInput = {
   notes: string | null;
 };
 
-/** Input untuk assign driver ke booking */
 export type AssignDriverInput = {
   bookingId: string;
   driverId: string;
-  departureTime: string;   // ISO timestamp
+  departureTime: string;
   notes: string | null;
 };
 
-/** Input untuk update status delivery */
 export type UpdateDeliveryStatusInput = {
   deliveryId: string;
   status: DeliveryStatus;
 };
 
-// =============================================================
-// Calculated / Derived Types
-// =============================================================
-
-/** Kalkulasi harga sewa sebelum booking dibuat */
 export type PriceBreakdown = {
   dailyRate: number;
   halfDayRate: number;
   numberOfDays: number;
   durationType: RentalDuration;
   subtotal: number;
-  depositAmount: number;   // 30% dari total (DEPOSIT_PERCENTAGE dari constants.ts)
+  depositAmount: number;
   totalPrice: number;
 };
 
-/** Summary ringkas untuk booking card di list */
 export type BookingSummary = Pick<
   Booking,
   | "id"
@@ -91,11 +68,6 @@ export type BookingSummary = Pick<
   vehiclePrimaryImageUrl: string | null;
 };
 
-// =============================================================
-// Filter Types
-// =============================================================
-
-/** Filter untuk list booking (getMyBookings, getOwnerBookings) */
 export type BookingFilters = {
   status?: BookingStatus | "all";
   startDateFrom?: string;
@@ -103,16 +75,11 @@ export type BookingFilters = {
   sort?: "newest" | "oldest" | "start_date_asc" | "start_date_desc";
 };
 
-/** Filter untuk list delivery (getDriverDeliveries) */
 export type DeliveryFilters = {
   status?: DeliveryStatus | "all";
   dateFrom?: string;
   dateTo?: string;
 };
-
-// =============================================================
-// Action Result Type (konsisten dengan vehicles.ts pattern)
-// =============================================================
 
 export type BookingActionResult = {
   error?: string;

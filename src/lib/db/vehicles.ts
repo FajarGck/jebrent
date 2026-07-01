@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import type { Vehicle, VehicleImage, VehicleType, VehicleStatus } from '@/types/database';
+import { translateError } from '@/lib/helper/error-translator';
 
 export type VehicleFilters = {
   search?: string;
@@ -17,7 +18,6 @@ export type VehicleWithImages = Vehicle & {
 
 export async function getVehicles(filters?: VehicleFilters): Promise<VehicleWithImages[]> {
   const supabase = await createClient();
-
   let query = supabase.from('vehicles').select('*, vehicle_images(*), profiles(full_name, avatar_url)') as any;
 
   if (filters?.search) {
@@ -65,35 +65,35 @@ export async function getVehicleById(id: string): Promise<VehicleWithImages | nu
 export async function insertVehicle(vehicle: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Vehicle | null; error: string | null }> {
   const supabase = await createClient();
   const { data, error } = await (supabase.from('vehicles') as any).insert(vehicle).select().single();
-  if (error) return { data: null, error: error.message };
+  if (error) return { data: null, error: translateError(error.message) };
   return { data: data as Vehicle, error: null };
 }
 
 export async function updateVehicle(id: string, updates: Partial<Omit<Vehicle, 'id' | 'created_at'>>): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await (supabase.from('vehicles') as any).update(updates).eq('id', id);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
   return { error: null };
 }
 
 export async function deleteVehicle(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await supabase.from('vehicles').delete().eq('id', id);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
   return { error: null };
 }
 
 export async function insertVehicleImage(image: Omit<VehicleImage, 'id'>): Promise<{ data: VehicleImage | null; error: string | null }> {
   const supabase = await createClient();
   const { data, error } = await (supabase.from('vehicle_images') as any).insert(image).select().single();
-  if (error) return { data: null, error: error.message };
+  if (error) return { data: null, error: translateError(error.message) };
   return { data: data as VehicleImage, error: null };
 }
 
 export async function deleteVehicleImage(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const { error } = await supabase.from('vehicle_images').delete().eq('id', id);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
   return { error: null };
 }
 
@@ -101,7 +101,7 @@ export async function setVehiclePrimaryImage(imageId: string, vehicleId: string)
   const supabase = await createClient();
   await (supabase.from('vehicle_images') as any).update({ is_primary: false }).eq('vehicle_id', vehicleId);
   const { error } = await (supabase.from('vehicle_images') as any).update({ is_primary: true }).eq('id', imageId);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
   return { error: null };
 }
 

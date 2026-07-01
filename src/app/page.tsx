@@ -120,13 +120,22 @@ export default function HomePage() {
             <div className="flex flex-col justify-center rounded-2xl border border-border bg-card p-8 shadow-sm">
               <h3 className="text-xl font-semibold">Tertarik Menjadi Mitra Owner?</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Punya kendaraan menganggur di rumah? Daftarkan armada Anda sekarang dan mulailah menghasilkan pendapatan pasif tambahan. Hubungi kami melalui WhatsApp atau Email untuk pendaftaran langsung secara mudah!
+                Punya kendaraan menganggur di rumah? Daftarkan armada Anda sekarang dan mulailah menghasilkan pendapatan pasif tambahan. Hubungi kami melalui WhatsApp atau Email untuk pendaftaran
+                langsung secara mudah!
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a href="mailto:support@jebrent.com" className="inline-flex rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover">
+                <a
+                  href="mailto:support@jebrent.com"
+                  className="inline-flex rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-fg shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover"
+                >
                   Kirim Email Pendaftaran
                 </a>
-                <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer" className="inline-flex rounded-xl border border-border bg-background px-5 py-2.5 text-xs font-semibold transition-all hover:border-border-hover">
+                <a
+                  href="https://wa.me/6281234567890"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex rounded-xl border border-border bg-background px-5 py-2.5 text-xs font-semibold transition-all hover:border-border-hover"
+                >
                   WhatsApp Admin
                 </a>
               </div>

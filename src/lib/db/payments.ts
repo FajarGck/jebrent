@@ -1,18 +1,8 @@
-// =============================================================
-// src/lib/db/payments.ts
-// Data Access Layer: Payments — Dev B ONLY
-// =============================================================
-// Aturan:
-//  - Hanya query Supabase. Tidak ada business logic.
-//  - Business logic → actions/payments.ts
-// =============================================================
+'use server';
 
 import { createClient } from "@/lib/supabase/server";
 import type { Payment, PaymentStatus, PaymentWithBooking } from "@/types/database";
-
-// =============================================================
-// INSERT
-// =============================================================
+import { translateError } from "@/lib/helper/error-translator";
 
 export async function insertPayment(
   data: Omit<Payment, "id" | "created_at">
@@ -23,13 +13,9 @@ export async function insertPayment(
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) return { data: null, error: translateError(error.message) };
   return { data: result as Payment, error: null };
 }
-
-// =============================================================
-// SELECT — Single Record
-// =============================================================
 
 export async function getPaymentById(id: string): Promise<Payment | null> {
   const supabase = await createClient();
@@ -59,11 +45,6 @@ export async function getPaymentByBookingId(
   return data as Payment;
 }
 
-// =============================================================
-// SELECT — Collections
-// =============================================================
-
-// Admin: semua payment yang perlu dikonfirmasi
 export async function getPendingPayments(): Promise<PaymentWithBooking[]> {
   const supabase = await createClient();
   const { data, error } = await (supabase
@@ -83,7 +64,6 @@ export async function getPendingPayments(): Promise<PaymentWithBooking[]> {
   return data as PaymentWithBooking[];
 }
 
-// Admin: semua payment
 export async function getAllPayments(): Promise<PaymentWithBooking[]> {
   const supabase = await createClient();
   const { data, error } = await (supabase
@@ -102,10 +82,6 @@ export async function getAllPayments(): Promise<PaymentWithBooking[]> {
   return data as PaymentWithBooking[];
 }
 
-// =============================================================
-// UPDATE
-// =============================================================
-
 export async function updatePaymentStatus(
   id: string,
   status: PaymentStatus,
@@ -123,6 +99,6 @@ export async function updatePaymentStatus(
     .update(updates)
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
   return { error: null };
 }

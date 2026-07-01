@@ -5,10 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/**
- * Format angka ke Rupiah
- * formatCurrency(150000) → "Rp 150.000"
- */
+// Format angka ke mata uang Rupiah (IDR)
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -18,10 +15,7 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-/**
- * Format tanggal ke format Indonesia
- * formatDate("2026-06-10") → "10 Juni 2026"
- */
+// Format tanggal ke penanggalan bahasa Indonesia
 export function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("id-ID", {
     day: "numeric",
@@ -30,9 +24,7 @@ export function formatDate(dateString: string): string {
   });
 }
 
-/**
- * Hitung durasi sewa dalam hari
- */
+// Hitung jumlah hari sewa dari rentang tanggal
 export function calculateRentalDays(startDate: string, endDate: string): number {
   const start = new Date(startDate);
   const end = new Date(endDate);

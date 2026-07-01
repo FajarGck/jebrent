@@ -1,5 +1,5 @@
-// Data Access Layer: Reviews
 import { createClient } from "@/lib/supabase/server";
+import { translateError } from "@/lib/helper/error-translator";
 
 export type Review = {
   id: string;
@@ -16,9 +16,6 @@ export type Review = {
   };
 };
 
-/**
- * Ambil semua review untuk kendaraan tertentu, beserta data reviewer.
- */
 export async function getReviewsByVehicle(
   vehicleId: string
 ): Promise<Review[]> {
@@ -40,9 +37,6 @@ export async function getReviewsByVehicle(
   return data as Review[];
 }
 
-/**
- * Simpan review baru ke database.
- */
 export async function insertReview(
   data: Omit<Review, "id" | "created_at" | "profiles">
 ): Promise<{ data: Review | null; error: string | null }> {
@@ -53,6 +47,6 @@ export async function insertReview(
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) return { data: null, error: translateError(error.message) };
   return { data: result as Review, error: null };
 }

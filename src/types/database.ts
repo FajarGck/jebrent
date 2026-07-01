@@ -1,48 +1,18 @@
-// =============================================================
-// Jebrent Database Types
-// =============================================================
-// Ini bisa di-auto-generate dari Supabase CLI nanti:
-//   npx supabase gen types typescript --project-id <project-id> > src/types/database.ts
-//
-// Untuk sekarang, kita define manual supaya development bisa jalan.
-// =============================================================
+export type UserRole = 'renter' | 'owner' | 'admin' | 'driver';
 
-// -- Enums --
+export type VehicleStatus = 'available' | 'rented' | 'maintenance' | 'inactive';
 
-export type UserRole = "renter" | "owner" | "admin" | "driver";
+export type VehicleType = 'sedan' | 'suv' | 'mpv' | 'hatchback' | 'pickup' | 'van';
 
-export type VehicleStatus = "available" | "rented" | "maintenance" | "inactive";
+export type BookingStatus = 'pending' | 'confirmed' | 'paid' | 'in_delivery' | 'active' | 'returning' | 'completed' | 'cancelled';
 
-export type VehicleType = "sedan" | "suv" | "mpv" | "hatchback" | "pickup" | "van";
+export type PaymentStatus = 'unpaid' | 'pending_confirmation' | 'confirmed' | 'rejected' | 'refunded';
 
-export type BookingStatus =
-  | "pending"
-  | "confirmed"
-  | "paid"
-  | "in_delivery"
-  | "active"
-  | "returning"
-  | "completed"
-  | "cancelled";
+export type PaymentMethod = 'bank_transfer' | 'ewallet' | 'cash';
 
-export type PaymentStatus =
-  | "unpaid"
-  | "pending_confirmation"
-  | "confirmed"
-  | "rejected"
-  | "refunded";
+export type DeliveryStatus = 'assigned' | 'on_the_way' | 'delivered' | 'completed';
 
-export type PaymentMethod = "bank_transfer" | "ewallet" | "cash";
-
-export type DeliveryStatus =
-  | "assigned"
-  | "on_the_way"
-  | "delivered"
-  | "completed";
-
-export type RentalDuration = "half_day" | "daily" | "weekly";
-
-// -- Row types (represents a row in the database) --
+export type RentalDuration = 'half_day' | 'daily' | 'weekly';
 
 export type Profile = {
   id: string;
@@ -66,9 +36,9 @@ export type Vehicle = {
   type: VehicleType;
   year: number;
   color: string;
-  half_day_rate: number; // per 12 jam
-  daily_rate: number; // per 24 jam (computed: half_day_rate * 2 or custom)
-  weekly_rate: number | null; // opsional, rate mingguan dengan diskon
+  half_day_rate: number;
+  daily_rate: number;
+  weekly_rate: number | null;
   status: VehicleStatus;
   mileage: number;
   description: string | null;
@@ -153,103 +123,94 @@ export type DeliverySchedule = {
   created_at: string;
 };
 
-// -- Extended Types (Join Results) --
-// These types represent data returned from queries with joins.
-// Both Dev A and Dev B should import these — do NOT modify this file.
-
-/** Booking with vehicle info and renter profile */
 export type BookingWithVehicle = Booking & {
   vehicles: Vehicle & {
     vehicle_images: VehicleImage[];
   };
-  profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
+  profiles: Pick<Profile, 'id' | 'full_name' | 'phone' | 'avatar_url'>;
 };
 
-/** Booking with full details: vehicle, renter, payment, delivery */
 export type BookingWithDetails = Booking & {
   vehicles: Vehicle & {
     vehicle_images: VehicleImage[];
-    profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
+    profiles: Pick<Profile, 'id' | 'full_name' | 'phone'> | null;
   };
-  profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
+  profiles: Pick<Profile, 'id' | 'full_name' | 'phone' | 'avatar_url'>;
   payments: Payment | null;
   reviews: any;
-  delivery_schedules: (DeliverySchedule & {
-    profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
-  }) | null;
+  delivery_schedules:
+    | (DeliverySchedule & {
+        profiles: Pick<Profile, 'id' | 'full_name' | 'phone'> | null;
+      })
+    | null;
 };
 
-/** Payment with linked booking and vehicle info */
 export type PaymentWithBooking = Payment & {
   bookings: Booking & {
-    vehicles: Pick<Vehicle, "id" | "brand" | "model" | "plate_number">;
-    profiles: Pick<Profile, "id" | "full_name">;
+    vehicles: Pick<Vehicle, 'id' | 'brand' | 'model' | 'plate_number'>;
+    profiles: Pick<Profile, 'id' | 'full_name'>;
   };
 };
 
-/** Review with reviewer profile info */
 export type ReviewWithProfile = Review & {
-  profiles: Pick<Profile, "id" | "full_name" | "avatar_url">;
+  profiles: Pick<Profile, 'id' | 'full_name' | 'avatar_url'>;
 };
 
-/** Delivery schedule with driver and booking details */
 export type DeliveryWithDetails = DeliverySchedule & {
-  profiles: Pick<Profile, "id" | "full_name" | "phone" | "avatar_url">;
+  profiles: Pick<Profile, 'id' | 'full_name' | 'phone' | 'avatar_url'>;
   bookings: Booking & {
-    vehicles: Pick<Vehicle, "id" | "brand" | "model" | "plate_number">;
-    profiles: Pick<Profile, "id" | "full_name" | "phone"> | null;
+    vehicles: Pick<Vehicle, 'id' | 'brand' | 'model' | 'plate_number'>;
+    profiles: Pick<Profile, 'id' | 'full_name' | 'phone'> | null;
   };
 };
-
-// -- Supabase Database type (used by supabase client for type safety) --
 
 export type Database = {
   public: {
     Tables: {
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, "created_at" | "updated_at">;
-        Update: Partial<Omit<Profile, "id" | "created_at">>;
+        Insert: Omit<Profile, 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
       };
       vehicles: {
         Row: Vehicle;
-        Insert: Omit<Vehicle, "id" | "created_at" | "updated_at">;
-        Update: Partial<Omit<Vehicle, "id" | "created_at">>;
+        Insert: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Vehicle, 'id' | 'created_at'>>;
       };
       vehicle_images: {
         Row: VehicleImage;
-        Insert: Omit<VehicleImage, "id">;
-        Update: Partial<Omit<VehicleImage, "id">>;
+        Insert: Omit<VehicleImage, 'id'>;
+        Update: Partial<Omit<VehicleImage, 'id'>>;
       };
       bookings: {
         Row: Booking;
-        Insert: Omit<Booking, "id" | "created_at" | "updated_at">;
-        Update: Partial<Omit<Booking, "id" | "created_at">>;
+        Insert: Omit<Booking, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Booking, 'id' | 'created_at'>>;
       };
       payments: {
         Row: Payment;
-        Insert: Omit<Payment, "id" | "created_at">;
-        Update: Partial<Omit<Payment, "id" | "created_at">>;
+        Insert: Omit<Payment, 'id' | 'created_at'>;
+        Update: Partial<Omit<Payment, 'id' | 'created_at'>>;
       };
       addons: {
         Row: Addon;
-        Insert: Omit<Addon, "id" | "created_at">;
-        Update: Partial<Omit<Addon, "id" | "created_at">>;
+        Insert: Omit<Addon, 'id' | 'created_at'>;
+        Update: Partial<Omit<Addon, 'id' | 'created_at'>>;
       };
       booking_addons: {
         Row: BookingAddon;
-        Insert: Omit<BookingAddon, "id">;
-        Update: Partial<Omit<BookingAddon, "id">>;
+        Insert: Omit<BookingAddon, 'id'>;
+        Update: Partial<Omit<BookingAddon, 'id'>>;
       };
       reviews: {
         Row: Review;
-        Insert: Omit<Review, "id" | "created_at">;
-        Update: Partial<Omit<Review, "id" | "created_at">>;
+        Insert: Omit<Review, 'id' | 'created_at'>;
+        Update: Partial<Omit<Review, 'id' | 'created_at'>>;
       };
       delivery_schedules: {
         Row: DeliverySchedule;
-        Insert: Omit<DeliverySchedule, "id" | "created_at">;
-        Update: Partial<Omit<DeliverySchedule, "id" | "created_at">>;
+        Insert: Omit<DeliverySchedule, 'id' | 'created_at'>;
+        Update: Partial<Omit<DeliverySchedule, 'id' | 'created_at'>>;
       };
     };
     Enums: {

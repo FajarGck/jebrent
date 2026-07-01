@@ -2,13 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getDashboardPath, resolveUserRole } from '@/lib/auth';
 
-// -- Route configuration --
-// Public: accessible without login
-// Auth: login/register pages (redirect to dashboard if already logged in)
-// Role: dashboard pages restricted by role
+// Rute akses berdasarkan status login dan role pengguna
 const PUBLIC_PATHS = ['/', '/vehicles'];
 const AUTH_PATHS = ['/login', '/register'];
-// Routes that require login but are accessible by ALL authenticated roles
 const AUTHENTICATED_PATHS = ['/bookings'];
 const ROLE_PATHS: Record<string, string[]> = {
   admin: ['/dashboard/admin'],
@@ -53,7 +49,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect /dashboard (exact) to role-specific dashboard
   if (user && pathname === '/dashboard') {
     const role = await resolveUserRole(supabase, user);
     return NextResponse.redirect(new URL(getDashboardPath(role), request.url));

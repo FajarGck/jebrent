@@ -1,6 +1,4 @@
 'use client';
-// src/components/bookings/booking-card.tsx
-// Card komponen untuk list booking — Dev A ONLY
 
 import Link from 'next/link';
 import { Car, Calendar, MapPin, ChevronRight } from 'lucide-react';
@@ -14,31 +12,18 @@ type BookingCardProps = {
 
 export default function BookingCard({ booking }: BookingCardProps) {
   const vehicle = booking.vehicles;
-  const primaryImage =
-    vehicle?.vehicle_images?.find((img) => img.is_primary) ??
-    vehicle?.vehicle_images?.[0];
+  const primaryImage = vehicle?.vehicle_images?.find((img) => img.is_primary) ?? vehicle?.vehicle_images?.[0];
 
-  const days = Math.max(
-    1,
-    Math.ceil(
-      (new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  );
+  const days = Math.max(1, Math.ceil((new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) / (1000 * 60 * 60 * 24)));
 
   return (
     <Link
       href={`/bookings/${booking.id}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:border-border-hover hover:shadow-md sm:flex-row"
     >
-      {/* Vehicle Thumbnail */}
-      <div className="relative h-36 w-full flex-shrink-0 sm:h-auto sm:w-36">
+      <div className="relative h-36 w-full shrink-0 sm:h-auto sm:w-36">
         {primaryImage ? (
-          <img
-            src={primaryImage.image_url}
-            alt={`${vehicle.brand} ${vehicle.model}`}
-            className="h-full w-full object-cover"
-          />
+          <img src={primaryImage.image_url} alt={`${vehicle.brand} ${vehicle.model}`} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-card-muted">
             <Car className="h-10 w-10 text-subtle" />
@@ -46,10 +31,8 @@ export default function BookingCard({ booking }: BookingCardProps) {
         )}
       </div>
 
-      {/* Content */}
       <div className="flex flex-1 flex-col justify-between gap-3 p-4">
         <div>
-          {/* Header: vehicle name + status */}
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-semibold leading-tight">
@@ -60,18 +43,14 @@ export default function BookingCard({ booking }: BookingCardProps) {
             <BookingStatusBadge status={booking.status} size="sm" />
           </div>
 
-          {/* Date range */}
           <div className="mt-3 flex items-center gap-1.5 text-sm text-muted">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
             <span>
               {formatDate(booking.start_date)} — {formatDate(booking.end_date)}
             </span>
-            <span className="rounded-full bg-card-muted px-2 py-0.5 text-xs">
-              {days} hari
-            </span>
+            <span className="rounded-full bg-card-muted px-2 py-0.5 text-xs">{days} hari</span>
           </div>
 
-          {/* Delivery address jika ada */}
           {booking.delivery_address && (
             <div className="mt-1.5 flex items-start gap-1.5 text-xs text-muted">
               <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
@@ -80,7 +59,6 @@ export default function BookingCard({ booking }: BookingCardProps) {
           )}
         </div>
 
-        {/* Footer: harga + chevron */}
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted">Total</p>

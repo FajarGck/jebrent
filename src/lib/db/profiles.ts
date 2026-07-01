@@ -1,5 +1,3 @@
-// Data Access Layer: Profiles
-// Direct Supabase queries - no business logic here
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/database";
 

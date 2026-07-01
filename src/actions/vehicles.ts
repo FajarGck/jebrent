@@ -2,11 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { MAX_VEHICLE_IMAGES, MAX_VEHICLE_IMAGES_SIZE, VEHICLE_IMAGES_TYPE } from '@/lib/constants';
+import { MAX_VEHICLE_IMAGES } from '@/lib/constants';
 import type { VehicleType, Vehicle } from '@/types/database';
 import { requireVehicleManager } from '@/lib/auth-server';
 import { validateVehicleImages } from '@/lib/helper/vehicle-images-validator';
 import { resolveUserRole } from '@/lib/auth';
+import { translateError } from '@/lib/helper/error-translator';
 
 export type VehicleActionResult = {
   error?: string;
@@ -20,7 +21,7 @@ export async function createVehicle(formData: FormData): Promise<VehicleActionRe
   try {
     user = await requireVehicleManager();
   } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Unauthorized' };
+    return { error: err instanceof Error ? translateError(err.message) : 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
   }
 
   const plate = formData.get('plate_number') as string;
@@ -38,12 +39,14 @@ export async function createVehicle(formData: FormData): Promise<VehicleActionRe
   const imageValidation = validateVehicleImages(rawImages);
 
   if ('error' in imageValidation) {
-    return { error: imageValidation.error };
+    return { error: translateError(imageValidation.error) };
   }
 
   const images = imageValidation.files as File[];
 
-  if (!plate || !brand || !model || !type || !year || !color || !halfDayRate || !dailyRate) return { error: 'Semua field wajib harus diisi' };
+  if (!plate || !brand || !model || !type || !year || !color || !halfDayRate || !dailyRate) {
+    return { error: 'Semua field wajib harus diisi' };
+  }
 
   const role = await resolveUserRole(supabase, user);
   let ownerId = user.id;
@@ -76,10 +79,10 @@ export async function createVehicle(formData: FormData): Promise<VehicleActionRe
     const message = vehicleErr?.message ?? 'Gagal menyimpan';
     if (message.toLowerCase().includes('row-level security') || message.toLowerCase().includes('permission denied')) {
       return {
-        error: 'Akses database ditolak. Jalankan migration Supabase terbaru, pastikan role akun = owner di tabel profiles, lalu login ulang.',
+        error: 'Akses ditolak. Pastikan akun Anda memiliki role pemilik (owner) dan coba lagi.',
       };
     }
-    return { error: message };
+    return { error: translateError(message) };
   }
 
   const validImages = images.filter((f) => f.size > 0).slice(0, MAX_VEHICLE_IMAGES);
@@ -91,7 +94,7 @@ export async function createVehicle(formData: FormData): Promise<VehicleActionRe
 
     const { error: uploadErr } = await supabase.storage.from('vehicle-images').upload(path, file, { contentType: file.type });
     if (uploadErr) {
-      console.error('Image upload failed:', uploadErr);
+      console.error('Image upload failed:', translateError(uploadErr.message));
       continue;
     }
 
@@ -115,23 +118,23 @@ export async function updateVehicleAction(formData: FormData): Promise<VehicleAc
   const imageValidation = validateVehicleImages(formData.getAll('new_images') as File[]);
 
   if ('error' in imageValidation) {
-    return { error: imageValidation.error };
+    return { error: translateError(imageValidation.error) };
   }
 
   const newImages = imageValidation.files as File[];
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const vehicleId = formData.get('vehicle_id') as string;
-  if (!vehicleId) return { error: 'Vehicle ID missing' };
+  if (!vehicleId) return { error: 'ID kendaraan tidak ditemukan' };
 
   const role = await resolveUserRole(supabase, user);
   const { data: existingData } = await supabase.from('vehicles').select('owner_id').eq('id', vehicleId).single();
   const existing = existingData as { owner_id: string } | null;
-  if (!existing || (existing.owner_id !== user.id && role !== 'admin')) return { error: 'Unauthorized' };
+  if (!existing || (existing.owner_id !== user.id && role !== 'admin')) {
+    return { error: 'Anda tidak memiliki hak akses untuk mengedit kendaraan ini.' };
+  }
 
   const updates: Record<string, string | number | null> = {};
   const fields = ['plate_number', 'brand', 'model', 'type', 'year', 'color', 'half_day_rate', 'daily_rate', 'weekly_rate', 'description', 'status', 'mileage'];
@@ -152,7 +155,7 @@ export async function updateVehicleAction(formData: FormData): Promise<VehicleAc
 
   if (Object.keys(updates).length > 0) {
     const { error } = await (supabase.from('vehicles') as any).update(updates).eq('id', vehicleId);
-    if (error) return { error: error.message };
+    if (error) return { error: translateError(error.message) };
   }
 
   const validNew = newImages.filter((f) => f.size > 0).slice(0, MAX_VEHICLE_IMAGES);
@@ -168,7 +171,7 @@ export async function updateVehicleAction(formData: FormData): Promise<VehicleAc
 
       const { error: uploadErr } = await supabase.storage.from('vehicle-images').upload(path, file, { contentType: file.type });
       if (uploadErr) {
-        console.error('Image upload failed during update:', uploadErr);
+        console.error('Image upload failed during update:', translateError(uploadErr.message));
         continue;
       }
 
@@ -191,15 +194,15 @@ export async function updateVehicleAction(formData: FormData): Promise<VehicleAc
 
 export async function deleteVehicleAction(vehicleId: string): Promise<VehicleActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const role = await resolveUserRole(supabase, user);
   const { data: existingData } = await supabase.from('vehicles').select('owner_id').eq('id', vehicleId).single();
   const existing = existingData as { owner_id: string } | null;
-  if (!existing || (existing.owner_id !== user.id && role !== 'admin')) return { error: 'Unauthorized' };
+  if (!existing || (existing.owner_id !== user.id && role !== 'admin')) {
+    return { error: 'Anda tidak memiliki hak akses untuk menghapus kendaraan ini.' };
+  }
 
   const { data: imagesData } = await supabase.from('vehicle_images').select('image_url').eq('vehicle_id', vehicleId);
   const images = (imagesData ?? []) as { image_url: string }[];
@@ -219,7 +222,7 @@ export async function deleteVehicleAction(vehicleId: string): Promise<VehicleAct
   }
 
   const { error } = await supabase.from('vehicles').delete().eq('id', vehicleId);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
 
   revalidatePath('/dashboard/owner/vehicles');
   revalidatePath('/vehicles');
@@ -228,10 +231,8 @@ export async function deleteVehicleAction(vehicleId: string): Promise<VehicleAct
 
 export async function uploadVehicleImageAction(formData: FormData): Promise<VehicleActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   const vehicleId = formData.get('vehicle_id') as string;
   const file = formData.get('file') as File;
@@ -239,7 +240,9 @@ export async function uploadVehicleImageAction(formData: FormData): Promise<Vehi
 
   const { data: vehicleData } = await supabase.from('vehicles').select('owner_id').eq('id', vehicleId).single();
   const vehicle = vehicleData as { owner_id: string } | null;
-  if (!vehicle || vehicle.owner_id !== user.id) return { error: 'Unauthorized' };
+  if (!vehicle || vehicle.owner_id !== user.id) {
+    return { error: 'Anda tidak memiliki hak akses untuk mengelola kendaraan ini.' };
+  }
 
   const { count } = await supabase.from('vehicle_images').select('*', { count: 'exact', head: true }).eq('vehicle_id', vehicleId);
   if ((count ?? 0) >= MAX_VEHICLE_IMAGES) return { error: `Maksimal ${MAX_VEHICLE_IMAGES} foto` };
@@ -248,7 +251,7 @@ export async function uploadVehicleImageAction(formData: FormData): Promise<Vehi
   const path = `${user.id}/${vehicleId}/${Date.now()}.${ext}`;
 
   const { error: uploadErr } = await supabase.storage.from('vehicle-images').upload(path, file, { contentType: file.type });
-  if (uploadErr) return { error: uploadErr.message };
+  if (uploadErr) return { error: translateError(uploadErr.message) };
 
   const { data: urlData } = supabase.storage.from('vehicle-images').getPublicUrl(path);
 
@@ -265,21 +268,19 @@ export async function uploadVehicleImageAction(formData: FormData): Promise<Vehi
 
 export async function deleteVehicleImageAction(imageId: string, imageUrl: string): Promise<VehicleActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   try {
     const url = new URL(imageUrl);
     const path = url.pathname.split('/storage/v1/object/public/vehicle-images/')[1];
     if (path) await supabase.storage.from('vehicle-images').remove([path]);
   } catch {
-    // ignore URL parse errors
+    // URL parsing failed
   }
 
   const { error } = await supabase.from('vehicle_images').delete().eq('id', imageId);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
 
   revalidatePath('/dashboard/owner/vehicles');
   return { success: true };
@@ -287,15 +288,13 @@ export async function deleteVehicleImageAction(imageId: string, imageUrl: string
 
 export async function setPrimaryImageAction(imageId: string, vehicleId: string): Promise<VehicleActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Unauthorized' };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesi Anda telah berakhir. Silakan masuk kembali.' };
 
   await (supabase.from('vehicle_images') as any).update({ is_primary: false }).eq('vehicle_id', vehicleId);
 
   const { error } = await (supabase.from('vehicle_images') as any).update({ is_primary: true }).eq('id', imageId);
-  if (error) return { error: error.message };
+  if (error) return { error: translateError(error.message) };
 
   revalidatePath('/dashboard/owner/vehicles');
   revalidatePath(`/vehicles/${vehicleId}`);
